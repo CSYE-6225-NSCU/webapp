@@ -92,13 +92,13 @@ spring.cache.type=none
 1. **Build the project** using Maven:
 
    ```bash
-   ./mvnw clean install
+   mvn clean install
    ```
 
 2. **Run the application**:
 
    ```bash
-   ./mvnw spring-boot:run
+   mvn spring-boot:run
    ```
 
 The application will run on `http://localhost:8080/`.
