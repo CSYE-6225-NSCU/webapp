@@ -49,7 +49,7 @@ public class UserController {
     }
 
 
-    @GetMapping
+    @GetMapping("/self")
     public ResponseEntity<User> getUser(Authentication authentication) {
         String email = authentication.getName();
         Optional<User> optionalUser = userRepository.findByEmail(email);
@@ -63,7 +63,7 @@ public class UserController {
     }
 
 
-    @PutMapping
+    @PutMapping("/self")
     public ResponseEntity<Void> updateUser(
             @Valid @RequestBody UserUpdateDTO updatedUser,
             Authentication authentication) {
