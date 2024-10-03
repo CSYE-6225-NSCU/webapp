@@ -74,7 +74,7 @@ public class UserControllerIntegrationTest {
 
     @Test
     public void testGetUser_Success() throws Exception {
-        mockMvc.perform(get("/v1/user")
+        mockMvc.perform(get("/v1/user/self")
                         .header("Authorization", "Basic " + encodeCredentials("test@test.com", "Password123!")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.email").value("test@test.com"))

@@ -5,12 +5,11 @@
 This web application provides a **Health Check API** that monitors the status of the application and its connection to a PostgreSQL database. It is implemented using **Spring Boot** and connects to a **PostgreSQL 16** database. The `/healthz` endpoint checks the health of the database connection and ensures that the application can handle requests.
 
 ## Technologies Used
+
 - **Programming Language**: Java
 - **Framework**: Spring Boot
 - **Database**: PostgreSQL 16
 - **ORM Framework**: Hibernate (JPA)
-
----
 
 ## Prerequisites
 
@@ -20,223 +19,156 @@ Before running this application, make sure you have the following installed:
 2. **PostgreSQL 16**: [Download and install PostgreSQL 16](https://www.postgresql.org/download/)
 3. **Apache Maven**: [Install Maven](https://maven.apache.org/install.html)
 4. **Git**: [Install Git](https://git-scm.com/)
-
----
+5. **An SSH client** (e.g., OpenSSH)
+6. **Postman for API testing**
 
 ## Project Setup
 
-### Step 1: Clone the Repository
+### Clone the Repository
 
-Clone the project from GitHub to your local machine.
+Clone the project from GitHub to your local machine:
 
 ```bash
 git clone https://github.com/CSYE-6225-NSCU/webapp.git
 cd webapp
 ```
 
-### Step 2: Configure PostgreSQL
+## Setting Up the DigitalOcean VM
 
-1. Ensure that PostgreSQL 16 is installed and running:
+### 1. Launch a DigitalOcean Ubuntu 24.04 LTS Droplet
+
+- Create a new droplet in your DigitalOcean account using Ubuntu 24.04 LTS.
+
+### 2. Connect to the Droplet
+
+Create an SSH shortcut to connect to your droplet for easier access:
+
+1. Open the SSH config file:
    ```bash
-   brew services start postgresql@16
+   nano ~/.ssh/config
    ```
 
-2. Log in to PostgreSQL as the default user (`postgres`) and create the necessary database and user:
+2. Add the following configuration:
+   ```
+   Host digitalocean
+   HostName <YOUR_DROPLET_IP_ADDRESS>
+   User <YOUR_SSH_USERNAME>
+   IdentityFile ~/.ssh/<YOUR_PRIVATE_KEY_FILE>
+   Port 22
+   ```
+   Replace the placeholders accordingly.
+
+3. Save and exit the file (Ctrl + O, then Enter to save; Ctrl + X to exit).
+
+4. Change file permissions:
    ```bash
-   psql postgres
+   chmod 600 ~/.ssh/config
    ```
 
-   In the PostgreSQL shell, create the `webapp_db` database and the `webapp_user` user with the appropriate privileges:
-
+5. Connect using:
    ```bash
-   CREATE DATABASE webapp_db;
+   ssh digitalocean
+   ```
+
+### 3. Set Up the Environment on the Droplet
+
+1. Install Java:
+   ```bash
+   sudo apt update
+   sudo apt install openjdk-17-jdk -y
+   ```
+
+2. Install PostgreSQL:
+   ```bash
+   sudo apt install postgresql postgresql-contrib -y
+   ```
+
+3. Install Maven:
+   ```bash
+   sudo apt install maven -y
+   ```
+
+4. Configure PostgreSQL:
+   ```bash
+   sudo -i -u postgres
+   psql
+   ```
+   In the PostgreSQL shell:
+   ```sql
    CREATE USER webapp_user WITH PASSWORD 'your_password';
+   CREATE DATABASE webapp_db;
    GRANT ALL PRIVILEGES ON DATABASE webapp_db TO webapp_user;
+   ALTER USER webapp_user WITH SUPERUSER;
+   \q
    ```
 
-3. Update the `pg_hba.conf` file to allow local connections using MD5:
-   ```bash
-   sudo nano /usr/local/var/postgresql@16/pg_hba.confg
-   ```
+### 4. Transfer Project Files to the Droplet
 
-   Add the following line:
-   ```
-   local   all             all                                     md5
-   ```
+On your local machine:
+```bash
+scp -r /path/to/your/webapp digitalocean:/home/
+```
 
-4. Restart PostgreSQL to apply the changes:
-   ```bash
-   brew services restart postgresql@16
-   ```
+### 5. Configure the Application
 
-### Step 3: Configure Application Properties
-
-In the `src/main/resources/application.properties` file, update the PostgreSQL connection details:
+Update the `application.properties` file in `src/main/resources`:
 
 ```properties
+spring.application.name=webapp
 spring.datasource.url=jdbc:postgresql://localhost:5432/webapp_db
-spring.datasource.username=webapp_user
-spring.datasource.password=your_password
+spring.datasource.username=${DB_USERNAME:webapp_user}
+spring.datasource.password=${DB_PASSWORD:your_password}
 spring.datasource.driver-class-name=org.postgresql.Driver
-
 spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
-spring.jpa.hibernate.ddl-auto=none
-spring.jpa.show-sql=false
-
-# Disable caching
-spring.cache.type=none
+spring.jackson.property-naming-strategy=SNAKE_CASE
+spring.jackson.deserialization.fail-on-unknown-properties=true
+spring.jackson.time-zone=UTC
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
 ```
 
-### Step 4: Build and Run the Application
-
-1. **Build the project** using Maven:
-
-   ```bash
-   mvn clean install
-   ```
-
-2. **Run the application**:
-
-   ```bash
-   mvn spring-boot:run
-   ```
-
-The application will run on `http://localhost:8080/`.
-
----
-
-## API Endpoints
-
-### Health Check API
-
-#### **`GET /healthz`**
-
-This endpoint checks the health of the application and its connection to the database.
-
-- **Success Response (HTTP 200)**:
-    - Returned when the application is able to connect to the database successfully.
-    - No response body is included.
-
-- **Failure Response (HTTP 503)**:
-    - Returned when the application cannot connect to the database.
-    - No response body is included.
-
-- **Invalid Request (HTTP 400)**:
-    - Returned if the request contains a payload (only GET requests without a body are allowed).
-
-- **Unsupported Method (HTTP 405)**:
-    - Returned if the request uses a method other than `GET`.
-
----
-
-## Testing the API
-
-### 1. **Successful Health Check**
-
-Run this command to check if the database connection is healthy:
+### 6. Build and Run the Application
 
 ```bash
-curl -vvvv http://localhost:8080/healthz
+cd /home/webapp
+mvn clean install
+mvn spring-boot:run
 ```
 
-Expected Response:
-
-```
-< HTTP/1.1 200 OK
-< Cache-Control: no-cache, must-revalidate
-< Pragma: no-cache
-< X-Content-Type-Options: nosniff
-< Content-Length: 0
-```
-
-### 2. **Simulate Database Connection Failure**
-
-To simulate a database connection failure, stop PostgreSQL:
+### 7. Set Up Firewall Rules
 
 ```bash
-brew services stop postgresql@16
+sudo ufw allow 8080
+sudo ufw allow ssh
+sudo ufw enable
 ```
 
-Then, run the health check again:
+### 8. Verify the Setup
 
 ```bash
-curl -vvvv http://localhost:8080/healthz
+curl http://<YOUR_DROPLET_IP_ADDRESS>:8080/healthz
 ```
 
-Expected Response:
+## Testing the API with Postman
 
-```
-< HTTP/1.1 503 Service Unavailable
-< Cache-Control: no-cache, must-revalidate
-< Pragma: no-cache
-< X-Content-Type-Options: nosniff
-< Content-Length: 0
-```
+Base URL: `http://<YOUR_DROPLET_IP_ADDRESS>:8080`
 
-Restart PostgreSQL after testing:
+1. Create a User (POST /v1/user)
+2. Get User Information (GET /v1/user/self)
+3. Update User Information (PUT /v1/user/self)
+4. Health Check (GET /healthz)
 
-```bash
-brew services start postgresql@16
-```
-
-### 3. **Invalid Request with Payload**
-
-To test that the API rejects requests with a payload, run:
-
-```bash
-curl -vvvv -X GET -d '{"test": "data"}' http://localhost:8080/healthz
-```
-
-Expected Response:
-
-```
-< HTTP/1.1 400 Bad Request
-< Cache-Control: no-cache, must-revalidate
-< Pragma: no-cache
-< X-Content-Type-Options: nosniff
-< Content-Length: 0
-```
-
-### 4. **Unsupported HTTP Method**
-
-To test that the API only supports the GET method, run:
-
-```bash
-curl -vvvv -X PUT http://localhost:8080/healthz
-```
-
-Expected Response:
-
-```
-< HTTP/1.1 405 Method Not Allowed
-< Allow: GET
-```
-
----
-
-## Deployment Instructions
-
-You can deploy this application on any cloud provider that supports Java Spring Boot applications, such as Heroku, AWS, or GCP.
-
-1. **Package the Application**:
-
-   ```bash
-   ./mvnw clean package
-   ```
-
-2. **Deploy the Jar** on your preferred cloud service.
-
----
+For detailed request and response examples, refer to the original README.
 
 ## Notes
 
-- **Security**: Ensure that no sensitive information (such as passwords) is committed to the repository.
-- **Performance**: This is a simple API with minimal configuration, designed to be lightweight and fast.
-
----
+- Ensure PostgreSQL is running: `sudo service postgresql start`
+- Database tables should be automatically created on application start.
+- Verify that the firewall (UFW) is enabled and allowing port 8080.
+- Do not commit sensitive information (like passwords) to the repository.
+- This API is designed to be lightweight and fast.
 
 ## Conclusion
 
 This web application provides a robust and simple health check mechanism for monitoring the status of a Spring Boot application and its PostgreSQL database connection.
-
----
