@@ -1,6 +1,7 @@
 package com.example.webapp.entity;
 
-import com.fasterxml.jackson.annotation.JsonProperty; // Updated import
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -12,40 +13,59 @@ public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @JsonProperty("id")
     private Long id;
 
     @Column(unique = true, nullable = false)
     @Email(message = "Email should be valid")
     @NotBlank(message = "Email is mandatory")
+    @JsonProperty("email")
     private String email;
 
     @Column(nullable = false)
-    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY) // Updated annotation
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @NotBlank(message = "Password is mandatory")
     private String password;
 
-    @Column(nullable = false, name = "first_name")
+    @Column(nullable = false)
+    @JsonProperty("first_name")
     @NotBlank(message = "First Name is mandatory")
     private String firstName;
 
-    @Column(nullable = false, name = "last_name")
+    @Column(nullable = false)
+    @JsonProperty("last_name")
     @NotBlank(message = "Last Name is mandatory")
     private String lastName;
 
     @Column(updatable = false, name = "account_created")
+    @JsonProperty("account_created")
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", timezone = "UTC")
     private LocalDateTime accountCreated;
 
     @Column(name = "account_updated")
+    @JsonProperty("account_updated")
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", timezone = "UTC")
     private LocalDateTime accountUpdated;
 
-    // Getters and Setters
 
-    // id
+    public User() {
+    }
+
+    public User(String email, String password, String firstName, String lastName) {
+        this.email = email;
+        this.password = password;
+        this.firstName = firstName;
+        this.lastName = lastName;
+    }
+
+
+
+
     public Long getId() {
         return id;
     }
 
-    // email
+
     public String getEmail() {
         return email;
     }
@@ -54,7 +74,7 @@ public class User {
         this.email = email;
     }
 
-    // password
+
     public String getPassword() {
         return password;
     }
@@ -63,7 +83,7 @@ public class User {
         this.password = password;
     }
 
-    // firstName
+
     public String getFirstName() {
         return firstName;
     }
@@ -72,7 +92,7 @@ public class User {
         this.firstName = firstName;
     }
 
-    // lastName
+
     public String getLastName() {
         return lastName;
     }
@@ -90,7 +110,7 @@ public class User {
         this.accountCreated = accountCreated;
     }
 
-    // accountUpdated
+
     public LocalDateTime getAccountUpdated() {
         return accountUpdated;
     }
@@ -99,7 +119,7 @@ public class User {
         this.accountUpdated = accountUpdated;
     }
 
-    // Lifecycle Callbacks
+
 
     @PrePersist
     protected void onCreate() {
