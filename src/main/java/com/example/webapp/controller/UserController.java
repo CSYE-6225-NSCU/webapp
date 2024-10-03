@@ -105,10 +105,19 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
+        // Other methods here...
 
-    @RequestMapping(method = { RequestMethod.DELETE, RequestMethod.HEAD,
-            RequestMethod.OPTIONS, RequestMethod.PATCH })
-    public ResponseEntity<Void> methodNotAllowedUser() {
-        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).build();
-    }
+        // Handle unsupported methods for /v1/user
+        @RequestMapping(method = {RequestMethod.DELETE, RequestMethod.HEAD, RequestMethod.OPTIONS, RequestMethod.PATCH})
+        public ResponseEntity<Void> methodNotAllowedUser() {
+            return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).build();
+        }
+
+        // Handle unsupported methods for /v1/user/self
+        @RequestMapping(value = "/self", method = {RequestMethod.DELETE, RequestMethod.HEAD, RequestMethod.OPTIONS, RequestMethod.PATCH})
+        public ResponseEntity<Void> methodNotAllowedUserSelf() {
+            return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).build();
+        }
+
+
 }
