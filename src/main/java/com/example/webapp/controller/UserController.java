@@ -1,6 +1,7 @@
 package com.example.webapp.controller;
 
 import com.example.webapp.entity.User;
+import com.example.webapp.dto.UserUpdateDTO;
 import com.example.webapp.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -9,6 +10,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 @RestController
@@ -21,89 +23,92 @@ public class UserController {
     @Autowired
     private BCryptPasswordEncoder passwordEncoder;
 
+
     @PostMapping
-    public ResponseEntity<?> createUser(@Valid @RequestBody User user) {
-        // Check if user with the same email already exists
-        Optional<User> existingUser = userRepository.findByEmail(user.getEmail());
+    public ResponseEntity<User> createUser(@Valid @RequestBody User newUser) {
+
+
+        Optional<User> existingUser = userRepository.findByEmail(newUser.getEmail());
         if (existingUser.isPresent()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("User with this email already exists.");
+
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         }
 
-        // Ignore account_created and account_updated if provided
-        user.setAccountCreated(null);
-        user.setAccountUpdated(null);
 
-        // Hash the password using BCrypt
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        newUser.setPassword(passwordEncoder.encode(newUser.getPassword()));
 
-        // Save the user
-        User savedUser = userRepository.save(user);
 
-        // Do not return the password in the response
-        savedUser.setPassword(null);
+        newUser.setAccountCreated(LocalDateTime.now());
+        newUser.setAccountUpdated(LocalDateTime.now());
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedUser);
-        // Ensure that the method returns a ResponseEntity
+        // Save the new user
+        userRepository.save(newUser);
+
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(newUser);
     }
 
+
     @GetMapping
-    public ResponseEntity<?> getUser(Authentication authentication) {
+    public ResponseEntity<User> getUser(Authentication authentication) {
         String email = authentication.getName();
         Optional<User> optionalUser = userRepository.findByEmail(email);
 
         if (optionalUser.isPresent()) {
             User user = optionalUser.get();
-            user.setPassword(null); // Exclude password from response
-
             return ResponseEntity.ok(user);
         } else {
-            // Added return statement to handle the case when user is not found
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         }
     }
 
+
     @PutMapping
-    public ResponseEntity<?> updateUser(
-            @Valid @RequestBody User updatedUser,
+    public ResponseEntity<Void> updateUser(
+            @Valid @RequestBody UserUpdateDTO updatedUser,
             Authentication authentication) {
+
+
+        if (updatedUser.getFirstName() == null && updatedUser.getLastName() == null && updatedUser.getPassword() == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        }
 
         String email = authentication.getName();
         Optional<User> optionalUser = userRepository.findByEmail(email);
 
         if (!optionalUser.isPresent()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         }
 
         User existingUser = optionalUser.get();
 
-        // Disallow updates to email and timestamps
-        if (updatedUser.getEmail() != null &&
-                !updatedUser.getEmail().equals(existingUser.getEmail())) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Email cannot be updated.");
+
+        if (updatedUser.getFirstName() != null) {
+            existingUser.setFirstName(updatedUser.getFirstName());
         }
 
-        if (updatedUser.getAccountCreated() != null ||
-                updatedUser.getAccountUpdated() != null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Cannot update account_created or account_updated.");
+        if (updatedUser.getLastName() != null) {
+            existingUser.setLastName(updatedUser.getLastName());
         }
 
-        // Update allowed fields
-        existingUser.setFirstName(updatedUser.getFirstName());
-        existingUser.setLastName(updatedUser.getLastName());
-
-        if (updatedUser.getPassword() != null &&
-                !updatedUser.getPassword().isEmpty()) {
+        if (updatedUser.getPassword() != null && !updatedUser.getPassword().isEmpty()) {
             existingUser.setPassword(
                     passwordEncoder.encode(updatedUser.getPassword()));
         }
 
-        userRepository.save(existingUser);
-        existingUser.setPassword(null); // Exclude password from response
 
-        return ResponseEntity.ok(existingUser);
-        // Added return statement to ensure the method returns a ResponseEntity
+        existingUser.setAccountUpdated(LocalDateTime.now());
+
+        userRepository.save(existingUser);
+
+
+        return ResponseEntity.noContent().build();
+    }
+
+
+    @RequestMapping(method = { RequestMethod.DELETE, RequestMethod.HEAD,
+            RequestMethod.OPTIONS, RequestMethod.PATCH })
+    public ResponseEntity<Void> methodNotAllowedUser() {
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).build();
     }
 }
