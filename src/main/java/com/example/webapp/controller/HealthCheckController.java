@@ -14,7 +14,7 @@ import java.io.IOException;
 
 @RestController
 @RequestMapping("/healthz")
-public class HealthCheckController {
+public class HealthCheckController 
 
     private static final Logger logger = LoggerFactory.getLogger(HealthCheckController.class);
 
