@@ -58,6 +58,7 @@
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
+			<version>42.6.0</version> <!-- Update to the latest secure version -->
 		</dependency>
 
 		<!-- Spring Boot Starter Test -->
