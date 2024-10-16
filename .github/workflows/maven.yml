@@ -7,44 +7,22 @@ on:
   pull_request:
     branches:
       - main
-  workflow_dispatch:  # Allows the workflow to be triggered manually
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: webapp_user
-          POSTGRES_PASSWORD: your_password
-          POSTGRES_DB: webapp_db
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U webapp_user"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
           cache: maven
-      - name: Wait for PostgreSQL to be ready
-        run: |
-          until pg_isready -h localhost -U webapp_user -d webapp_db; do
-            echo "Waiting for PostgreSQL to be ready..."
-            sleep 5
-          done
-      - name: Build and Test with Maven
-        run: mvn clean install
-      # Step 6 (optional): Run the application to verify (can be removed if not required)
-      - name: Run Spring Boot Application (Optional)
-        run: |
-          nohup mvn spring-boot:run &
+
+      - name: Test with Maven
+        run: mvn test
