@@ -1,0 +1,24 @@
+name: Packer Status Check
+
+on:
+  pull_request:
+    paths:
+      - '**.pkr.hcl'  # Only run when Packer files change
+
+jobs:
+  packer-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Packer
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y packer
+
+      - name: Run Packer Format Check
+        run: packer fmt -check -diff .
+
+      - name: Run Packer Validate
+        run: packer validate .
