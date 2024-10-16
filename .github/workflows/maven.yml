@@ -7,21 +7,61 @@ on:
   pull_request:
     branches:
       - main
-  workflow_dispatch:
+  workflow_dispatch:  # Allows the workflow to be triggered manually
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: webapp_user
+          POSTGRES_PASSWORD: your_password
+          POSTGRES_DB: webapp_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U webapp_user" 
+          --health-interval 10s 
+          --health-timeout 5s 
+          --health-retries 5
+
     steps:
-      - name: Checkout code
+      # Step 1: Check out the repository code
+      - name: Check out code
         uses: actions/checkout@v4
 
+      # Step 2: Set up JDK 17
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
+          cache: maven
 
+      # Step 3: Set up environment variables for the database
+      - name: Set environment variables
+        run: |
+          echo "DB_USERNAME=webapp_user" >> $GITHUB_ENV
+          echo "DB_PASSWORD=your_password" >> $GITHUB_ENV
+          echo "DB_URL=jdbc:postgresql://localhost:5432/webapp_db" >> $GITHUB_ENV
+
+      # Step 4: Wait for PostgreSQL to be ready
+      - name: Wait for PostgreSQL to start
+        run: |
+          until pg_isready -h localhost -U webapp_user -d webapp_db; do
+            echo "Waiting for PostgreSQL to be ready..."
+            sleep 5
+          done
+
+      # Step 5: Build and test the application using Maven
       - name: Build and test with Maven
-        run: mvn clean install
+        run: |
+          mvn clean install
+
+      # Step 6 (optional): Run the application to verify (can be removed if not required)
+      - name: Run Spring Boot Application (Optional)
+        run: |
+          nohup mvn spring-boot:run &
