@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - '**.pkr.hcl'  # Only run when Packer files change
+  workflow_dispatch:
 
 jobs:
   packer-lint:
