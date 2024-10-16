@@ -60,9 +60,6 @@ build/
 # Compiled class files
 *.class
 
-# Log files
-*.log
-
 # BlueJ files
 *.ctxt
 
@@ -126,7 +123,6 @@ application-local.yml
 
 ### General ###
 # Environment variables file
-.env
 *.env
 
 # Virtual machine crash logs
@@ -135,11 +131,7 @@ replay_pid*
 
 # Ignore build output directories
 /bin/
-/build/
 /target/
-
-# Ignore logs
-*.log
 
 # Ignore backup files
 *.bak
@@ -159,10 +151,6 @@ ehthumbs.db
 Desktop.ini
 
 # Ignore IDE-specific files
-*.iml
-*.ipr
-*.iws
-.idea/
 *.suo
 *.user
 *.userosscache
@@ -192,3 +180,88 @@ database.yml
 **/application.properties
 **/application.yml
 **/application.yaml
+# macOS specific
+
+Icon
+
+# iCloud generated files
+*.icloud
+
+# IntelliJ specific
+.idea/**/usage.statistics.xml
+.idea/**/dictionaries
+.idea/**/shelf
+.idea/**/aws.xml
+.idea/**/contentModel.xml
+.idea/**/sonarlint/
+.idea/replstate.xml
+.idea/httpRequests
+.idea_modules/
+.idea/**/misc.xml
+
+# Ignore Editor-based Rest Client
+
+# Android Studio specific
+.idea/caches/build_file_checksums.ser
+com_crashlytics_export_strings.xml
+crashlytics.properties
+crashlytics-build.properties
+fabric.properties
+
+# Ignore Gradle and Maven auto-import
+*.iml
+.idea/modules.xml
+.idea/artifacts
+.idea/compiler.xml
+.idea/jarRepositories.xml
+
+# Visual Studio Code specific
+.vscode/*
+
+# Terraform specific
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfvars
+*.tfvars.json
+.terraform.lock.hcl
+*.auto.tfvars
+.terraformrc
+terraform.rc
+
+# Ignore override files
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Plan output files (ignore generated files)
+*.tfplan
+
+# Java specific
+.mtj.tmp/
+
+# AWS CLI credentials (DO NOT commit AWS credentials)
+.aws/
+
+# Ignore environment configuration files
+secrets.yaml
+
+### Added for Packer ###
+packer_cache/
+*.pkrvars.hcl
+packer-manifest.json
+
+### Added for PostgreSQL ###
+*.pgsql
+*.sql
+*.db
+*.db-shm
+*.db-wal
+
+### Added for AWS ###
+.aws/credentials
+.pem
+.key
