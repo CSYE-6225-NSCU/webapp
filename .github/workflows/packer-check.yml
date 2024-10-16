@@ -1,28 +1,24 @@
-name: Packer Build
+name: Packer Status Check
 
 on:
-  push:
-    branches:
-      - main
+  pull_request:
+    paths:
+      - '**.pkr.hcl'  # Only run when Packer files change
 
 jobs:
-  packer-build:
+  packer-lint:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - name: Set up Packer
-        uses: hashicorp/setup-packer@v1
-        with:
-          packer_version: latest
+      - name: Install Packer
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y packer
 
-      - name: Validate Packer template
-        run: packer validate ./packer/packer-template.pkr.hcl
+      - name: Run Packer Format Check
+        run: packer fmt -check -diff .
 
-      - name: Build AMI
-        run: packer build ./packer/packer-template.pkr.hcl
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      - name: Run Packer Validate
+        run: packer validate .
