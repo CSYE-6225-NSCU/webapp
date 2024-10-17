@@ -87,9 +87,9 @@ build {
     inline = [
       "sudo systemctl start postgresql",
       "sudo systemctl enable postgresql",
-      "sudo -u postgres psql -c \"CREATE DATABASE ${var.db_name};\"",
-      "sudo -u postgres psql -c \"CREATE USER ${var.db_username} WITH PASSWORD '${var.db_password}';\"",
-      "sudo -u postgres psql -c \"GRANT ALL PRIVILEGES ON DATABASE ${var.db_name} TO ${var.db_username};\""
+      "sudo -u postgres psql -c \"CREATE DATABASE ${var.db_name}\"",
+      "sudo -u postgres psql -c \"CREATE USER ${var.db_username} WITH PASSWORD '${var.db_password}'\"",
+      "sudo -u postgres psql -c \"GRANT ALL PRIVILEGES ON DATABASE ${var.db_name} TO ${var.db_username}\""
     ]
   }
 
