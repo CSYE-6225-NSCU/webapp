@@ -3,7 +3,7 @@ name: Packer Status Check
 on:
   pull_request:
     paths:
-      - '**.pkr.hcl'  # Only run when Packer files change
+      - '/packer/packer-template.pkr.hcl'  # Only run when Packer files change
   workflow_dispatch:
 
 jobs:
