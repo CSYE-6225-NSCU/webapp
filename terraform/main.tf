@@ -57,7 +57,7 @@ resource "aws_security_group" "app_sg" {
 }
 
 resource "aws_instance" "web_app_instance" {
-  ami             = "ami-xxxxxxxx" # Replace with your custom AMI ID
+  ami             = "ami-0225d044edab050c8" # Replace with your custom AMI ID
   instance_type   = "t2.micro"
   subnet_id       = aws_subnet.public_subnet.id
   security_groups = [aws_security_group.app_sg.name]

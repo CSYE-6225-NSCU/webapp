@@ -2,16 +2,30 @@ name: Java CI with Maven
 
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
   pull_request:
-    branches:
-      - main
+    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
   build:
+
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: webapp_db
+          POSTGRES_USER: webapp_user
+          POSTGRES_PASSWORD: your_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - name: Checkout code
@@ -22,6 +36,19 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
+          cache: maven
 
-      - name: Build and test with Maven
+      - name: Set up Maven
+        run: sudo apt-get install -y maven
+
+      - name: Build with Maven
         run: mvn clean install
+
+      - name: Run Tests
+        run: mvn test
+
+    env:
+      DB_URL: ${{ secrets.DB_URL }}
+      DB_USERNAME: ${{ secrets.DB_USERNAME }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+

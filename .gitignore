@@ -96,7 +96,6 @@ mvnw.cmd
 .env.*
 
 # Exclude application properties if they contain sensitive data
-application.properties
 application.yml
 application-local.properties
 application-local.yml
