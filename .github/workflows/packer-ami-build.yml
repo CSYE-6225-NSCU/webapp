@@ -33,7 +33,7 @@ jobs:
       - name: Install Packer
         uses: hashicorp/setup-packer@v2
         with:
-          packer_version: 'latest'
+          version: 'latest'
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
