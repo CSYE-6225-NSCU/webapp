@@ -3,7 +3,7 @@ name: Packer Status Check
 on:
   pull_request:
     paths:
-      - '/packer/packer-template.pkr.hcl'  # Only run when Packer files change
+      - 'packer/packer-template.pkr.hcl'  # Corrected path without leading slash
   workflow_dispatch:
 
 jobs:
@@ -13,10 +13,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Install Packer
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y packer
+      - name: Setup Packer
+        uses: hashicorp/setup-packer@v1
+        with:
+          packer_version: '1.9.0' # Specify the desired Packer version
+
+      - name: Initialize Packer
+        run: packer init .
 
       - name: Run Packer Format Check
         run: packer fmt -check -diff .
