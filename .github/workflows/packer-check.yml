@@ -3,7 +3,7 @@ name: Packer Status Check
 on:
   pull_request:
     paths:
-      - 'packer/packer-template.pkr.hcl'
+      - 'packer/**.pkr.hcl'
   workflow_dispatch:
 
 jobs:
