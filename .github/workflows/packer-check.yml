@@ -14,7 +14,6 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Install Packer
-        working-directory: packer
         run: |
           sudo apt-get update
           sudo apt-get install -y packer
@@ -29,4 +28,12 @@ jobs:
 
       - name: Run Packer Validate
         working-directory: packer
-        run: packer validate .
+        run: |
+          packer validate \
+            -var "artifact_path=dummy.jar" \
+            -var "db_name=dummy_db" \
+            -var "db_username=dummy_user" \
+            -var "db_password=dummy_password" \
+            -var "instance_type=t2.micro" \
+            -var "region=us-east-1" \
+            .
