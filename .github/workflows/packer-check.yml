@@ -19,9 +19,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y packer
 
-      - name: Initialize Packer
-        working-directory: packer
-        run: packer init .
 
       - name: Run Packer Format Check
         working-directory: packer
