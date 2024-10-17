@@ -26,14 +26,29 @@ jobs:
         working-directory: packer
         run: packer fmt -check -diff .
 
-      - name: Run Packer Validate
-        working-directory: packer
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build and Test with Maven
+        run: mvn clean install
+
+      - name: Prepare Artifact
         run: |
+          mkdir -p artifact
+          cp target/*.jar artifact/webapp.jar
+
+      - name: Packer validate
+        run: |
+          cd packer
           packer validate \
-            -var "artifact_path=dummy.jar" \
-            -var "db_name=dummy_db" \
-            -var "db_username=dummy_user" \
-            -var "db_password=dummy_password" \
+            -var "artifact_path=../artifact/webapp.jar" \
+            -var "db_name=${{ secrets.DB_NAME }}" \
+            -var "db_username=${{ secrets.DB_USERNAME }}" \
+            -var "db_password=${{ secrets.DB_PASSWORD }}" \
             -var "instance_type=t2.micro" \
-            -var "region=us-east-1" \
-            .
+            -var "region=${{ secrets.AWS_REGION }}" \
+            packer-template.pkr.hcl
