@@ -1,0 +1,13 @@
+[Unit]
+Description=Web Application Service
+After=network.target
+
+[Service]
+User=csye6225
+Group=csye6225
+ExecStart=/usr/bin/java -jar /opt/webapp.jar
+SuccessExitStatus=143
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
