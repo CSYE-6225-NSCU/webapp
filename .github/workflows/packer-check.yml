@@ -15,23 +15,31 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # 2. Setup Packer using the community-maintained Action
-      - name: Setup Packer
-        uses: shivammathur/setup-packer@v1
-        with:
-          version: '1.9.0'  # Specify the desired Packer version
+      # 2. Install dependencies (e.g., unzip)
+      - name: Install Dependencies
+        run: sudo apt-get update && sudo apt-get install -y unzip
 
-      # 3. Initialize Packer in the specified directory
+      # 3. Download and Install Packer Manually
+      - name: Install Packer
+        run: |
+          PACKER_VERSION=1.9.0
+          wget https://releases.hashicorp.com/packer/${PACKER_VERSION}/packer_${PACKER_VERSION}_linux_amd64.zip
+          unzip packer_${PACKER_VERSION}_linux_amd64.zip
+          sudo mv packer /usr/local/bin/
+          rm packer_${PACKER_VERSION}_linux_amd64.zip
+          packer version
+
+      # 4. Initialize Packer in the specified directory
       - name: Initialize Packer
         working-directory: packer    # Ensure you are in the 'packer/' directory
         run: packer init .
 
-      # 4. Check Packer formatting
+      # 5. Check Packer formatting
       - name: Run Packer Format Check
         working-directory: packer    # Ensure you are in the 'packer/' directory
         run: packer fmt -check -diff .
 
-      # 5. Validate Packer configuration
+        # 6. Validate Packer configuration
       - name: Run Packer Validate
         working-directory: packer    # Ensure you are in the 'packer/' directory
         run: packer validate .
