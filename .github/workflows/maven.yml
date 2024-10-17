@@ -1,3 +1,11 @@
+name: Java CI with Maven
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
 jobs:
   build:
 
@@ -42,3 +50,4 @@ jobs:
       DB_URL: "jdbc:postgresql://localhost:5432/webapp_db"
       DB_USERNAME: "webapp_user"
       DB_PASSWORD: "your_password"
+
