@@ -8,23 +8,15 @@ packer {
 }
 
 variable "ami_name" {
-  default = "webapp-custom-ami"
+  default = "webapp-ami"
 }
 
 source "amazon-ebs" "ubuntu" {
-  ami_name      = "webapp-custom-ami"
+  ami_name      = var.ami_name
   instance_type = "t2.micro"
   region        = "us-east-1"
-  source_ami_filter {
-    filters = {
-      "name"                = "ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"
-      "virtualization-type" = "hvm"
-      "root-device-type"    = "ebs"
-    }
-    owners      = ["099720109477"]
-    most_recent = true
-  }
   ssh_username = "ubuntu"
+  source_ami    = "ami-0866a3c8686eaeeba"
 }
 
 build {
@@ -33,21 +25,11 @@ build {
   provisioner "shell" {
     inline = [
       # Update the package manager and upgrade existing packages
-      "sudo apt-get update --fix-missing",
+      "sudo apt-get update",
       "sudo apt-get upgrade -y",
 
-      # Add the PostgreSQL 16 repository and install PostgreSQL 16
-      "wget -qO - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -",
-      "sudo sh -c 'echo \"deb http://apt.postgresql.org/pub/repos/apt/ focal-pgdg main\" > /etc/apt/sources.list.d/pgdg.list'",
-      "sudo apt-get update",
-      "sudo apt-get install -y postgresql-16 postgresql-contrib",
-
       # Install OpenJDK 17
-      "sudo apt-get install -y openjdk-17-jdk openjdk-17-jre",
-
-      # Clean up apt cache to reduce image size and fix any broken packages
-      "sudo apt-get clean",
-      "sudo apt-get install -f"
+      "sudo apt-get install -y openjdk-17-jdk"
     ]
   }
 
