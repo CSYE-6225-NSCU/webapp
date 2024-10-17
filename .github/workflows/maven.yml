@@ -47,7 +47,7 @@ jobs:
         run: mvn test
 
     env:
-      DB_URL: "jdbc:postgresql://localhost:5432/webapp_db"
-      DB_USERNAME: "webapp_user"
-      DB_PASSWORD: "your_password"
+      DB_URL: ${{ secrets.DB_URL }}
+      DB_USERNAME: ${{ secrets.DB_USERNAME }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
 
