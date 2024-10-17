@@ -9,23 +9,7 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_DB: webapp_db
-          POSTGRES_USER: webapp_user
-          POSTGRES_PASSWORD: your_password
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
     steps:
       - name: Checkout code
@@ -38,17 +22,5 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Set up Maven
-        run: sudo apt-get install -y maven
-
-      - name: Build with Maven
+      - name: Build and Test with Maven
         run: mvn clean install
-
-      - name: Run Tests
-        run: mvn test
-
-    env:
-      DB_URL: ${{ secrets.DB_URL }}
-      DB_USERNAME: ${{ secrets.DB_USERNAME }}
-      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-
