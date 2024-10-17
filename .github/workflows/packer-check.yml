@@ -1,25 +1,37 @@
-name: Packer Status Check
+name: Packer CI
 
 on:
   pull_request:
     paths:
-      - 'packer/**.pkr.hcl'
-  workflow_dispatch:
+      - 'packer/**/*.pkr.hcl'  # Trigger only when Packer config files change
+  workflow_dispatch:           # Allow manual triggering of the workflow
 
 jobs:
-  packer-lint:
+  validate-packer:
     runs-on: ubuntu-latest
+
     steps:
+      # 1. Checkout the repository code
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Install Packer
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y packer
+      # 2. Setup Packer using HashiCorp's official GitHub Action
+      - name: Setup Packer
+        uses: hashicorp/setup-packer@v1
+        with:
+          packer_version: '1.9.0'  # Specify the desired Packer version
 
+      # 3. Initialize Packer in the specified directory
+      - name: Initialize Packer
+        working-directory: packer
+        run: packer init .
+
+      # 4. Check Packer formatting
       - name: Run Packer Format Check
+        working-directory: packer
         run: packer fmt -check -diff .
 
+      # 5. Validate Packer configuration
       - name: Run Packer Validate
+        working-directory: packer
         run: packer validate .
