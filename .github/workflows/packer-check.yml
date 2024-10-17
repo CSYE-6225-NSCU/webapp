@@ -1,45 +1,28 @@
-name: Packer CI
+name: Packer Status Check
 
 on:
   pull_request:
     paths:
-      - 'packer/**/*.pkr.hcl'  # Trigger only when Packer config files change
-  workflow_dispatch:           # Allow manual triggering of the workflow
+      - 'packer/**/*.pkr.hcl'
+  workflow_dispatch:
 
 jobs:
-  validate-packer:
+  packer-lint:
     runs-on: ubuntu-latest
-
     steps:
-      # 1. Checkout the repository code
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # 2. Install dependencies (e.g., unzip)
-      - name: Install Dependencies
-        run: sudo apt-get update && sudo apt-get install -y unzip
-
-      # 3. Download and Install Packer Manually
       - name: Install Packer
+        working-directory: packer
         run: |
-          PACKER_VERSION=1.9.0
-          wget https://releases.hashicorp.com/packer/${PACKER_VERSION}/packer_${PACKER_VERSION}_linux_amd64.zip
-          unzip packer_${PACKER_VERSION}_linux_amd64.zip
-          sudo mv packer /usr/local/bin/
-          rm packer_${PACKER_VERSION}_linux_amd64.zip
-          packer version
+          sudo apt-get update
+          sudo apt-get install -y packer
 
-      # 4. Initialize Packer in the specified directory
-      - name: Initialize Packer
-        working-directory: packer    # Ensure you are in the 'packer/' directory
-        run: packer init .
-
-      # 5. Check Packer formatting
       - name: Run Packer Format Check
-        working-directory: packer    # Ensure you are in the 'packer/' directory
+        working-directory: packer
         run: packer fmt -check -diff .
 
-        # 6. Validate Packer configuration
       - name: Run Packer Validate
-        working-directory: packer    # Ensure you are in the 'packer/' directory
+        working-directory: packer
         run: packer validate .
