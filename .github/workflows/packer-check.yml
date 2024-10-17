@@ -3,7 +3,7 @@ name: Packer Status Check
 on:
   pull_request:
     paths:
-      - '/packer/packer-template.pkr.hcl'
+      - 'packer/**/*.pkr.hcl'
   workflow_dispatch:
 
 jobs:
@@ -14,12 +14,19 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Install Packer
+        working-directory: packer
         run: |
           sudo apt-get update
           sudo apt-get install -y packer
 
+      - name: Initialize Packer
+        working-directory: packer
+        run: packer init .
+
       - name: Run Packer Format Check
+        working-directory: packer
         run: packer fmt -check -diff .
 
       - name: Run Packer Validate
+        working-directory: packer
         run: packer validate .
