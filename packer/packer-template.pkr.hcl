@@ -61,7 +61,6 @@ source "amazon-ebs" "ubuntu" {
   source_ami    = "ami-0866a3c8686eaeeba"
 }
 
-# Build Steps
 
 build {
   sources = ["source.amazon-ebs.ubuntu"]
