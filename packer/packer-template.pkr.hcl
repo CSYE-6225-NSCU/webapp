@@ -53,8 +53,6 @@ locals {
   ami_name = "${var.ami_name_prefix}-${formatdate("YYYYMMDD-HHmm", timestamp())}"
 }
 
-# EC2 Instance Configuration
-
 source "amazon-ebs" "ubuntu" {
   region        = var.region
   instance_type = var.instance_type
@@ -63,7 +61,6 @@ source "amazon-ebs" "ubuntu" {
   source_ami    = "ami-0866a3c8686eaeeba"
 }
 
-# Build Steps
 
 build {
   sources = ["source.amazon-ebs.ubuntu"]
