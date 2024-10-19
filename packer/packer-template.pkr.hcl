@@ -41,7 +41,7 @@ variable "instance_type" {
   description = "EC2 instance type"
   type        = string
 }
-# Variables
+# Variableswa
 
 variable "region" {
   description = "AWS region to build the AMI in"
