@@ -53,7 +53,6 @@ locals {
   ami_name = "${var.ami_name_prefix}-${formatdate("YYYYMMDD-HHmm", timestamp())}"
 }
 
-
 source "amazon-ebs" "ubuntu" {
   region        = var.region
   instance_type = var.instance_type
