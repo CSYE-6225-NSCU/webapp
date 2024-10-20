@@ -74,19 +74,7 @@ build {
       "sudo timedatectl set-timezone UTC",
       "sudo apt-get update",
       "sudo apt-get upgrade -y",
-      "sudo apt-get install -y openjdk-17-jdk-headless postgresql"
-    ]
-  }
-
-  # 2. Set up PostgreSQL database and configure access
-
-  provisioner "shell" {
-    inline = [
-      "sudo systemctl start postgresql",
-      "sudo systemctl enable postgresql",
-      "sudo -u postgres psql -c \"CREATE DATABASE ${var.db_name};\"",
-      "sudo -u postgres psql -c \"CREATE USER ${var.db_username} WITH PASSWORD '${var.db_password}';\"",
-      "sudo -u postgres psql -c \"GRANT ALL PRIVILEGES ON DATABASE ${var.db_name} TO ${var.db_username};\""
+      "sudo apt-get install -y openjdk-17-jdk-headless"
     ]
   }
 
@@ -120,10 +108,7 @@ build {
 
   provisioner "shell" {
     inline = [
-      "echo 'DB_URL=jdbc:postgresql://localhost:5432/${var.db_name}' | sudo tee -a /etc/environment",
-      "echo 'DB_USERNAME=${var.db_username}' | sudo tee -a /etc/environment",
-      "echo 'DB_PASSWORD=${var.db_password}' | sudo tee -a /etc/environment",
-      "sudo bash -c 'cat <<EOF > /etc/systemd/system/webapp.service\n[Unit]\nDescription=CSYE6225 WebApp\nAfter=network.target\n\n[Service]\nUser=csye6225\nExecStart=/usr/bin/java -jar /opt/myapp/webapp.jar\nRestart=always\nEnvironmentFile=/etc/environment\n\n[Install]\nWantedBy=multi-user.target\nEOF'",
+      "sudo bash -c 'cat <<EOF > /etc/systemd/system/webapp.service\n[Unit]\nDescription=Web Application Service\nAfter=network.target\n\n[Service]\nUser=csye6225\nGroup=csye6225\nEnvironmentFile=/etc/environment\nExecStart=/usr/bin/java -jar /opt/myapp/webapp.jar\nSuccessExitStatus=143\nRestart=on-failure\n\n[Install]\nWantedBy=multi-user.target\nEOF'",
       "sudo systemctl daemon-reload",
       "sudo systemctl enable webapp.service"
     ]
