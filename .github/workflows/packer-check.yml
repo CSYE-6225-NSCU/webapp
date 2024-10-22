@@ -1,9 +1,10 @@
 name: Packer Status Check
 
 on:
+  push:
+    branches: [ "main" ]
   pull_request:
-    paths:
-      - 'packer/**/*.pkr.hcl'
+    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
