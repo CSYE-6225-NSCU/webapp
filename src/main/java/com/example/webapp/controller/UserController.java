@@ -13,9 +13,6 @@ import jakarta.validation.Valid;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
-@RestController
-@RequestMapping("/v1/user")
-public class UserController {
 
     @Autowired
     private UserRepository userRepository;
