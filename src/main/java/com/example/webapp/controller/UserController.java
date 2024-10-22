@@ -105,9 +105,6 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
-        // Other methods here...
-
-        // Handle unsupported methods for /v1/user
         @RequestMapping(method = {RequestMethod.DELETE, RequestMethod.HEAD, RequestMethod.OPTIONS, RequestMethod.PATCH})
         public ResponseEntity<Void> methodNotAllowedUser() {
             return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).build();
