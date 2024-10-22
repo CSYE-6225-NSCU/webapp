@@ -16,21 +16,6 @@ variable "artifact_path" {
   type        = string
 }
 
-variable "db_name" {
-  description = "Database name"
-  type        = string
-}
-
-variable "db_username" {
-  description = "Database username"
-  type        = string
-}
-
-variable "db_password" {
-  description = "Database password"
-  type        = string
-}
-
 variable "ami_name_prefix" {
   description = "Prefix for the AMI name"
   type        = string
@@ -41,7 +26,7 @@ variable "instance_type" {
   description = "EC2 instance type"
   type        = string
 }
-# Variables
+# Variableswa
 
 variable "region" {
   description = "AWS region to build the AMI in"
@@ -53,8 +38,6 @@ locals {
   ami_name = "${var.ami_name_prefix}-${formatdate("YYYYMMDD-HHmm", timestamp())}"
 }
 
-# EC2 Instance Configuration
-
 source "amazon-ebs" "ubuntu" {
   region        = var.region
   instance_type = var.instance_type
@@ -63,7 +46,6 @@ source "amazon-ebs" "ubuntu" {
   source_ami    = "ami-0866a3c8686eaeeba"
 }
 
-# Build Steps
 
 build {
   sources = ["source.amazon-ebs.ubuntu"]
@@ -77,19 +59,7 @@ build {
       "sudo timedatectl set-timezone UTC",
       "sudo apt-get update",
       "sudo apt-get upgrade -y",
-      "sudo apt-get install -y openjdk-17-jdk-headless postgresql"
-    ]
-  }
-
-  # 2. Set up PostgreSQL database and configure access
-
-  provisioner "shell" {
-    inline = [
-      "sudo systemctl start postgresql",
-      "sudo systemctl enable postgresql",
-      "sudo -u postgres psql -c \"CREATE DATABASE ${var.db_name};\"",
-      "sudo -u postgres psql -c \"CREATE USER ${var.db_username} WITH PASSWORD '${var.db_password}';\"",
-      "sudo -u postgres psql -c \"GRANT ALL PRIVILEGES ON DATABASE ${var.db_name} TO ${var.db_username};\""
+      "sudo apt-get install -y openjdk-17-jdk-headless"
     ]
   }
 
@@ -123,10 +93,7 @@ build {
 
   provisioner "shell" {
     inline = [
-      "echo 'DB_URL=jdbc:postgresql://localhost:5432/${var.db_name}' | sudo tee -a /etc/environment",
-      "echo 'DB_USERNAME=${var.db_username}' | sudo tee -a /etc/environment",
-      "echo 'DB_PASSWORD=${var.db_password}' | sudo tee -a /etc/environment",
-      "sudo bash -c 'cat <<EOF > /etc/systemd/system/webapp.service\n[Unit]\nDescription=CSYE6225 WebApp\nAfter=network.target\n\n[Service]\nUser=csye6225\nExecStart=/usr/bin/java -jar /opt/myapp/webapp.jar\nRestart=always\nEnvironmentFile=/etc/environment\n\n[Install]\nWantedBy=multi-user.target\nEOF'",
+      "sudo bash -c 'cat <<EOF > /etc/systemd/system/webapp.service\n[Unit]\nDescription=Web Application Service\nAfter=network.target\n\n[Service]\nUser=csye6225\nGroup=csye6225\nEnvironmentFile=/etc/environment\nExecStart=/usr/bin/java -jar /opt/myapp/webapp.jar\nSuccessExitStatus=143\nRestart=on-failure\n\n[Install]\nWantedBy=multi-user.target\nEOF'",
       "sudo systemctl daemon-reload",
       "sudo systemctl enable webapp.service"
     ]
