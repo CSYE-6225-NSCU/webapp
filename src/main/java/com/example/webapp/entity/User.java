@@ -5,6 +5,8 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+
 import java.time.LocalDateTime;
 
 @Entity
@@ -19,6 +21,7 @@ public class User {
     @Column(unique = true, nullable = false)
     @Email(message = "Email should be valid")
     @NotBlank(message = "Email is mandatory")
+    @Pattern(regexp = "^[\\w-\\.]+@[\\w-]+\\.[a-z]{2,3}$", message = "Invalid email address")
     @JsonProperty("email")
     private String email;
 
