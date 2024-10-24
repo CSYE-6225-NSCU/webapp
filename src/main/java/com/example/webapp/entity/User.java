@@ -21,6 +21,7 @@ public class User {
     @Column(unique = true, nullable = false)
     @Email(message = "Email should be valid")
     @NotBlank(message = "Email is mandatory")
+    //email check
     @Pattern(regexp = "^[\\w-\\.]+@[\\w-]+\\.[a-z]{2,3}$", message = "Invalid email address")
     @JsonProperty("email")
     private String email;
