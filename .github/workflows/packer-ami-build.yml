@@ -65,16 +65,29 @@ jobs:
             -var "region=${{ secrets.AWS_REGION }}" \
             packer-template.pkr.hcl
 
+      - name: List Packer Directory Contents
+        run: |
+          echo "Listing contents of packer directory:"
+          ls -la packer
+
       - name: Extract AMI ID
-        working-directory: packer
         id: extract_ami
         run: |
+          # Verify if manifest.json exists
+          if [ ! -f packer/manifest.json ]; then
+            echo "Error: manifest.json not found in packer directory."
+            exit 1
+          fi
           # Extract the AMI ID without the source prefix
           AMI_ID=$(jq -r '.builds[0].artifact_id' packer/manifest.json | cut -d':' -f2)
+          # Validate AMI_ID format
+          if [[ ! $AMI_ID =~ ^ami-[0-9a-fA-F]{8,17}$ ]]; then
+            echo "Error: Extracted AMI ID is invalid: $AMI_ID"
+            exit 1
+          fi
           echo "AMI_ID=${AMI_ID}" >> $GITHUB_ENV
 
       - name: Share AMI with Demo Account
-        working-directory: packer
         run: |
           DEMO_ACCOUNT_ID="503561445917"  
           aws ec2 modify-image-attribute \
