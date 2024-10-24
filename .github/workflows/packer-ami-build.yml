@@ -49,7 +49,7 @@ jobs:
 
       - name: Validate Packer Template
         working-directory: packer
-        run: packer validate packer-template.pkr.hcl
+        run: packer validate -var-file=variables.pkrvars.hcl packer-template.pkr.hcl
 
       - name: Build AMI
         working-directory: packer
