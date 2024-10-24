@@ -25,7 +25,7 @@ variable "ami_name_prefix" {
 variable "instance_type" {
   description = "EC2 instance type"
   type        = string
-  default     = "t2.micro"
+  default     = "t2.micro"  # Added default for safety
 }
 
 variable "region" {
@@ -79,7 +79,7 @@ build {
     destination = "/tmp/webapp.jar"
   }
 
-
+  # 4. Move and Set Permissions for the JAR
   provisioner "shell" {
     inline = [
       "sudo mv /tmp/webapp.jar /opt/myapp/webapp.jar",
@@ -98,12 +98,14 @@ build {
     ]
   }
 
+
   provisioner "shell" {
     inline = [
       "sudo apt-get clean",
       "sudo rm -rf /var/lib/apt/lists/*"
     ]
   }
+
 
   post-processor "manifest" {
     output = "manifest.json"
