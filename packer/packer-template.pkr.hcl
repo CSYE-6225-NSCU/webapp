@@ -25,8 +25,8 @@ variable "ami_name_prefix" {
 variable "instance_type" {
   description = "EC2 instance type"
   type        = string
+  default     = "t2.micro" # Added default for safety
 }
-# Variableswa
 
 variable "region" {
   description = "AWS region to build the AMI in"
@@ -34,37 +34,42 @@ variable "region" {
   default     = "us-east-1"
 }
 
+# Locals
+
 locals {
-  ami_name = "${var.ami_name_prefix}-${formatdate("YYYYMMDD-HHmm", timestamp())}"
+  ami_name = "${var.ami_name_prefix}-${formatdate("20060102-1504", timestamp())}"
 }
+
+# Source Configuration
 
 source "amazon-ebs" "ubuntu" {
   region        = var.region
   instance_type = var.instance_type
   ami_name      = local.ami_name
   ssh_username  = "ubuntu"
-  source_ami    = "ami-0866a3c8686eaeeba"
+  source_ami    = "ami-0866a3c8686eaeeba" # Ensure this AMI ID is correct and available in the specified region
+
+  # Optional: Specify additional configurations like VPC ID, subnet ID, etc., if needed
 }
 
+# Build Configuration
 
 build {
   sources = ["source.amazon-ebs.ubuntu"]
 
-  # 1. Install Java 17 and PostgreSQL
-
+  # 1. Install Java 17 and Update System
   provisioner "shell" {
     inline = [
       "export DEBIAN_FRONTEND=noninteractive",
       "sudo timedatectl set-ntp true",
       "sudo timedatectl set-timezone UTC",
-      "sudo apt-get update",
+      "sudo apt-get update -y",
       "sudo apt-get upgrade -y",
       "sudo apt-get install -y openjdk-17-jdk-headless"
     ]
   }
 
-  # 3. Create the non-login user and set directory permissions
-
+  # 2. Create Non-Login User and Set Directory Permissions
   provisioner "shell" {
     inline = [
       "sudo adduser --system --group --no-create-home --shell /usr/sbin/nologin csye6225",
@@ -74,13 +79,13 @@ build {
     ]
   }
 
-  # 4. Copy the JAR from the local file to the instance
-
+  # 3. Copy the JAR from the Local File to the Instance
   provisioner "file" {
     source      = var.artifact_path
     destination = "/tmp/webapp.jar"
   }
 
+  # 4. Move and Set Permissions for the JAR
   provisioner "shell" {
     inline = [
       "sudo mv /tmp/webapp.jar /opt/myapp/webapp.jar",
@@ -89,22 +94,26 @@ build {
     ]
   }
 
-  # 5. Set environment variables and configure the systemd service
-
+  # 5. Set Environment Variables and Configure the Systemd Service
   provisioner "shell" {
     inline = [
       "sudo bash -c 'cat <<EOF > /etc/systemd/system/webapp.service\n[Unit]\nDescription=Web Application Service\nAfter=network.target\n\n[Service]\nUser=csye6225\nGroup=csye6225\nEnvironmentFile=/etc/environment\nExecStart=/usr/bin/java -jar /opt/myapp/webapp.jar\nSuccessExitStatus=143\nRestart=on-failure\n\n[Install]\nWantedBy=multi-user.target\nEOF'",
       "sudo systemctl daemon-reload",
-      "sudo systemctl enable webapp.service"
+      "sudo systemctl enable webapp.service",
+      "sudo systemctl start webapp.service" # Optionally start the service immediately
     ]
   }
 
-  # 6. Clean up APT cache
-
+  # 6. Clean Up APT Cache
   provisioner "shell" {
     inline = [
       "sudo apt-get clean",
       "sudo rm -rf /var/lib/apt/lists/*"
     ]
+  }
+
+  # Post-Processor: Generate Manifest
+  post-processor "manifest" {
+    output = "manifest.json"
   }
 }
