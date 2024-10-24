@@ -60,8 +60,13 @@ jobs:
 
       - name: Share AMI with Demo Account
         run: |
-          # Replace DEMO_ACCOUNT_ID with the actual demo AWS account ID
-          DEMO_ACCOUNT_ID="503561445917"
+          DEMO_ACCOUNT_ID="503561445917"  
+          AMI_ID=$(jq -r '.builds[0].artifact_id' packer/manifest.json)
           aws ec2 modify-image-attribute \
-            --image-id ${{ steps.packer_build.outputs.ami_id }} \
+            --image-id $AMI_ID \
             --launch-permission "Add=[{UserId=${DEMO_ACCOUNT_ID}}]"
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+
