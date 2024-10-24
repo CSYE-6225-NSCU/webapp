@@ -34,7 +34,7 @@ variable "region" {
 
 
 locals {
-  ami_name = "${var.ami_name_prefix}-${formatdate("20060102-150405", timestamp())}"
+  ami_name = "${var.ami_name_prefix}-${formatdate("YYYYMMDD-HHmm", timestamp())}"
 }
 
 
