@@ -1,4 +1,4 @@
-name: Packer AMI Build and Share
+name: Packer AMI Build
 
 on:
   push:
@@ -7,9 +7,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-share-ami:
+  build-ami:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -34,7 +33,7 @@ jobs:
       - name: Install Packer
         uses: hashicorp/setup-packer@v2
         with:
-          version: '1.11.2'  # Specify the desired Packer version
+          version: 'latest'
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -43,25 +42,31 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Initialize Packer
-        run: packer init packer-template.pkr.hcl
-
-      - name: Validate Packer Template
-        run: packer validate packer-template.pkr.hcl
-
-      - name: Build AMI
-        run: packer build -var-file=variables.pkrvars.hcl packer-template.pkr.hcl
+      - name: Packer Build
+        id: packer_build
+        run: |
+          cd packer
+          packer init .
+          packer build \
+            -var "artifact_path=../artifact/webapp.jar" \
+            -var "instance_type=t2.micro" \
+            -var "region=${{ secrets.AWS_REGION }}" \
+            packer-template.pkr.hcl
 
       - name: Extract AMI ID
         id: extract_ami
         run: |
-          # Extract the AMI ID without the source prefix
-          AMI_ID=$(jq -r '.builds[0].artifact_id' packer/manifest.json | cut -d':' -f2)
-          echo "AMI_ID=${AMI_ID}" >> $GITHUB_ENV
+          echo "::set-output name=ami_id::$(packer build -machine-readable packer-template.pkr.hcl | grep -oP '(?<=artifact_id:ami-)\w+')"
 
       - name: Share AMI with Demo Account
         run: |
-          DEMO_ACCOUNT_ID="503561445917"  # Replace with your demo AWS account ID
+          DEMO_ACCOUNT_ID="503561445917"  
+          AMI_ID=$(jq -r '.builds[0].artifact_id' packer/manifest.json | cut -d':' -f2)
           aws ec2 modify-image-attribute \
             --image-id $AMI_ID \
             --launch-permission "Add=[{UserId=${DEMO_ACCOUNT_ID}}]"
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+
