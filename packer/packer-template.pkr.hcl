@@ -35,8 +35,9 @@ variable "region" {
 
 
 locals {
-  ami_name = "${var.ami_name_prefix}-${formatdate("20060102-1504", timestamp())}"
+  ami_name = "${var.ami_name_prefix}-${formatdate("20060102-150405", timestamp())}"
 }
+
 
 
 source "amazon-ebs" "ubuntu" {
