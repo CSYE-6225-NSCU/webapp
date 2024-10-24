@@ -1,4 +1,4 @@
-# Packer Configuration
+
 
 packer {
   required_plugins {
@@ -9,7 +9,7 @@ packer {
   }
 }
 
-# Variables
+
 
 variable "artifact_path" {
   description = "The path to the application artifact JAR file"
@@ -25,8 +25,8 @@ variable "ami_name_prefix" {
 variable "instance_type" {
   description = "EC2 instance type"
   type        = string
+  default     = "t2.micro"
 }
-# Variableswa
 
 variable "region" {
   description = "AWS region to build the AMI in"
@@ -35,7 +35,7 @@ variable "region" {
 }
 
 locals {
-  ami_name = "${var.ami_name_prefix}-${formatdate("YYYYMMDD-HHmm", timestamp())}"
+  ami_name = "${var.ami_name_prefix}-${formatdate("20060102-1504", timestamp())}"
 }
 
 source "amazon-ebs" "ubuntu" {
@@ -44,26 +44,25 @@ source "amazon-ebs" "ubuntu" {
   ami_name      = local.ami_name
   ssh_username  = "ubuntu"
   source_ami    = "ami-0866a3c8686eaeeba"
-}
 
+
+}
 
 build {
   sources = ["source.amazon-ebs.ubuntu"]
 
-  # 1. Install Java 17 and PostgreSQL
 
   provisioner "shell" {
     inline = [
       "export DEBIAN_FRONTEND=noninteractive",
       "sudo timedatectl set-ntp true",
       "sudo timedatectl set-timezone UTC",
-      "sudo apt-get update",
+      "sudo apt-get update -y",
       "sudo apt-get upgrade -y",
       "sudo apt-get install -y openjdk-17-jdk-headless"
     ]
   }
 
-  # 3. Create the non-login user and set directory permissions
 
   provisioner "shell" {
     inline = [
@@ -74,12 +73,12 @@ build {
     ]
   }
 
-  # 4. Copy the JAR from the local file to the instance
 
   provisioner "file" {
     source      = var.artifact_path
     destination = "/tmp/webapp.jar"
   }
+
 
   provisioner "shell" {
     inline = [
@@ -89,22 +88,24 @@ build {
     ]
   }
 
-  # 5. Set environment variables and configure the systemd service
 
   provisioner "shell" {
     inline = [
       "sudo bash -c 'cat <<EOF > /etc/systemd/system/webapp.service\n[Unit]\nDescription=Web Application Service\nAfter=network.target\n\n[Service]\nUser=csye6225\nGroup=csye6225\nEnvironmentFile=/etc/environment\nExecStart=/usr/bin/java -jar /opt/myapp/webapp.jar\nSuccessExitStatus=143\nRestart=on-failure\n\n[Install]\nWantedBy=multi-user.target\nEOF'",
       "sudo systemctl daemon-reload",
-      "sudo systemctl enable webapp.service"
+      "sudo systemctl enable webapp.service",
+      "sudo systemctl start webapp.service"  # Optionally start the service immediately
     ]
   }
-
-  # 6. Clean up APT cache
 
   provisioner "shell" {
     inline = [
       "sudo apt-get clean",
       "sudo rm -rf /var/lib/apt/lists/*"
     ]
+  }
+
+  post-processor "manifest" {
+    output = "manifest.json"
   }
 }

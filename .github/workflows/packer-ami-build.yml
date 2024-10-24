@@ -43,6 +43,7 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Packer Build
+        id: packer_build
         run: |
           cd packer
           packer init .
@@ -51,3 +52,16 @@ jobs:
             -var "instance_type=t2.micro" \
             -var "region=${{ secrets.AWS_REGION }}" \
             packer-template.pkr.hcl
+
+      - name: Extract AMI ID
+        id: extract_ami
+        run: |
+          echo "::set-output name=ami_id::$(packer build -machine-readable packer-template.pkr.hcl | grep -oP '(?<=artifact_id:ami-)\w+')"
+
+      - name: Share AMI with Demo Account
+        run: |
+          # Replace DEMO_ACCOUNT_ID with the actual demo AWS account ID
+          DEMO_ACCOUNT_ID="503561445917"
+          aws ec2 modify-image-attribute \
+            --image-id ${{ steps.packer_build.outputs.ami_id }} \
+            --launch-permission "Add=[{UserId=${DEMO_ACCOUNT_ID}}]"
