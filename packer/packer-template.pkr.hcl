@@ -13,6 +13,7 @@ packer {
 variable "artifact_path" {
   description = "The path to the application artifact JAR file"
   type        = string
+  default     = "../artifact/webapp.jar"
 }
 
 variable "ami_name_prefix" {
