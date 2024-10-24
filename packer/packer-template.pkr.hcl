@@ -12,8 +12,7 @@ packer {
 
 variable "artifact_path" {
   description = "The path to the application artifact JAR file"
-  type        = string
-  default     = "../artifact/webapp.jar"
+  type        = strings
 }
 
 variable "ami_name_prefix" {
@@ -25,7 +24,6 @@ variable "ami_name_prefix" {
 variable "instance_type" {
   description = "EC2 instance type"
   type        = string
-  default     = "t2.micro" # Added default for safety
 }
 
 variable "region" {
