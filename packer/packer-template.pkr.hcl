@@ -15,6 +15,11 @@ variable "artifact_path" {
   type        = string
 }
 
+variable "amazon_cloudwatch_agent_path" {
+  description = "The path to the application artifact JAR file"
+  type        = string
+}
+
 variable "ami_name_prefix" {
   description = "Prefix for the AMI name"
   type        = string
@@ -110,7 +115,7 @@ build {
 
   # Upload CloudWatch Agent configuration file
   provisioner "file" {
-    source      = "amazon-cloudwatch-agent.json"  # Corrected source path
+    source      = var.amazon_cloudwatch_agent_path
     destination = "/tmp/amazon-cloudwatch-agent.json"
   }
 
