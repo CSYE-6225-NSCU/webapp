@@ -9,13 +9,7 @@ packer {
   }
 }
 
-
 variable "artifact_path" {
-  description = "The path to the application artifact JAR file"
-  type        = string
-}
-
-variable "amazon_cloudwatch_agent_path" {
   description = "The path to the application artifact JAR file"
   type        = string
 }
@@ -37,12 +31,9 @@ variable "region" {
   default     = "us-east-1"
 }
 
-
 locals {
   ami_name = "${var.ami_name_prefix}-${formatdate("YYYYMMDD-HHmm", timestamp())}"
 }
-
-
 
 source "amazon-ebs" "ubuntu" {
   region        = var.region
@@ -50,12 +41,12 @@ source "amazon-ebs" "ubuntu" {
   ami_name      = local.ami_name
   ssh_username  = "ubuntu"
   source_ami    = "ami-0866a3c8686eaeeba"
-
 }
 
 build {
   sources = ["source.amazon-ebs.ubuntu"]
 
+  # Update and install necessary packages
   provisioner "shell" {
     inline = [
       "export DEBIAN_FRONTEND=noninteractive",
@@ -67,6 +58,7 @@ build {
     ]
   }
 
+  # Create dedicated user and application directory
   provisioner "shell" {
     inline = [
       "sudo adduser --system --group --no-create-home --shell /usr/sbin/nologin csye6225",
@@ -76,11 +68,13 @@ build {
     ]
   }
 
+  # Upload the application artifact (JAR file)
   provisioner "file" {
     source      = var.artifact_path
     destination = "/tmp/webapp.jar"
   }
 
+  # Move the application artifact to the application directory
   provisioner "shell" {
     inline = [
       "sudo mv /tmp/webapp.jar /opt/myapp/webapp.jar",
@@ -89,6 +83,7 @@ build {
     ]
   }
 
+  # Create and enable the SystemD service for the application
   provisioner "shell" {
     inline = [
       "sudo bash -c 'cat <<EOF > /etc/systemd/system/webapp.service\n[Unit]\nDescription=Web Application Service\nAfter=network.target\n\n[Service]\nUser=csye6225\nGroup=csye6225\nEnvironmentFile=/etc/environment\nExecStart=/usr/bin/java -jar /opt/myapp/webapp.jar\nSuccessExitStatus=143\nRestart=on-failure\n\n[Install]\nWantedBy=multi-user.target\nEOF'",
@@ -98,12 +93,14 @@ build {
     ]
   }
 
+  # Clean up APT cache
   provisioner "shell" {
     inline = [
       "sudo apt-get clean",
       "sudo rm -rf /var/lib/apt/lists/*"
     ]
   }
+
   # Install CloudWatch Agent via deb package
   provisioner "shell" {
     inline = [
@@ -113,24 +110,25 @@ build {
     ]
   }
 
-  # Upload CloudWatch Agent configuration file
+  # Upload CloudWatch Agent configuration file from packer folder
   provisioner "file" {
-    source      = var.amazon_cloudwatch_agent_path
-    destination = "/tmp/amazon-cloudwatch-agent.json"
+    source      = "cloudwatch-config.json"
+    destination = "/opt/cloudwatch-config.json"
   }
 
   # Configure and start the CloudWatch Agent
   provisioner "shell" {
     inline = [
-      "sudo mkdir -p /opt/aws/amazon-cloudwatch-agent/etc",
-      "sudo mv /tmp/amazon-cloudwatch-agent.json /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json",
-      "sudo chown root:root /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json",
-      "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a stop",
-      "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json -s",
-      "sudo systemctl enable amazon-cloudwatch-agent.service"
+      "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \\",
+      "  -a stop",
+      "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \\",
+      "  -a fetch-config \\",
+      "  -m ec2 \\",
+      "  -c file:/opt/cloudwatch-config.json \\",
+      "  -s",
+      "sudo systemctl enable amazon-cloudwatch-agent"
     ]
   }
-
 
   # Post-processor to generate manifest
   post-processor "manifest" {
