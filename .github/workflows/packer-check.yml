@@ -19,14 +19,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y packer
 
-      - name: Run Packer init
-        working-directory: packer
-        run: packer init .
-
-      - name: Run Packer Format Check
-        working-directory: packer
-        run: packer fmt -check -diff .
-
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -42,9 +34,17 @@ jobs:
           mkdir -p artifact
           cp target/*.jar artifact/webapp.jar
 
+      - name: Run Packer init
+        working-directory: packer
+        run: packer init .
+
+      - name: Packer Format Check
+        working-directory: packer
+        run: packer fmt -check -diff .
+
       - name: Packer validate
+        working-directory: packer
         run: |
-          cd packer
           packer validate \
             -var "artifact_path=../artifact/webapp.jar" \
             -var "instance_type=t2.micro" \

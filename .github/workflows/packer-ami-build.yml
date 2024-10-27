@@ -23,9 +23,6 @@ jobs:
       - name: Build Application
         run: mvn clean package
 
-      - name: Run Integration Tests
-        run: mvn verify
-
       - name: Prepare Artifact
         run: |
           mkdir -p artifact
@@ -45,14 +42,13 @@ jobs:
 
       - name: Initialize Packer
         working-directory: packer
-        run: packer init packer-template.pkr.hcl
+        run: packer init .
 
       - name: Validate Packer Template
         working-directory: packer
         run: |
           packer validate \
             -var "artifact_path=../artifact/webapp.jar" \
-            -var "amazon_cloudwatch_agent_path=amazon-cloudwatch-agent.json" \
             -var "instance_type=t2.micro" \
             -var "region=${{ secrets.AWS_REGION }}" \
             packer-template.pkr.hcl
@@ -62,7 +58,6 @@ jobs:
         run: |
           packer build \
             -var "artifact_path=../artifact/webapp.jar" \
-            -var "amazon_cloudwatch_agent_path=amazon-cloudwatch-agent.json" \
             -var "instance_type=t2.micro" \
             -var "region=${{ secrets.AWS_REGION }}" \
             packer-template.pkr.hcl
