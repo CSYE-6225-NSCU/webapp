@@ -110,7 +110,7 @@ build {
 
   # Upload CloudWatch Agent configuration file
   provisioner "file" {
-    source      = "../amazon-cloudwatch-agent.json"
+    source      = "amazon-cloudwatch-agent.json"  # Corrected source path
     destination = "/tmp/amazon-cloudwatch-agent.json"
   }
 
@@ -125,6 +125,7 @@ build {
       "sudo systemctl enable amazon-cloudwatch-agent.service"
     ]
   }
+
 
   # Post-processor to generate manifest
   post-processor "manifest" {
