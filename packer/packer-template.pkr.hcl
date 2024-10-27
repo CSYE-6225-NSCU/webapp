@@ -48,7 +48,6 @@ source "amazon-ebs" "ubuntu" {
 
 }
 
-
 build {
   sources = ["source.amazon-ebs.ubuntu"]
 
@@ -85,7 +84,6 @@ build {
     ]
   }
 
-
   provisioner "shell" {
     inline = [
       "sudo bash -c 'cat <<EOF > /etc/systemd/system/webapp.service\n[Unit]\nDescription=Web Application Service\nAfter=network.target\n\n[Service]\nUser=csye6225\nGroup=csye6225\nEnvironmentFile=/etc/environment\nExecStart=/usr/bin/java -jar /opt/myapp/webapp.jar\nSuccessExitStatus=143\nRestart=on-failure\n\n[Install]\nWantedBy=multi-user.target\nEOF'",
@@ -101,7 +99,34 @@ build {
       "sudo rm -rf /var/lib/apt/lists/*"
     ]
   }
+  # Install CloudWatch Agent via deb package
+  provisioner "shell" {
+    inline = [
+      "wget https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb",
+      "sudo dpkg -i -E ./amazon-cloudwatch-agent.deb",
+      "rm -f amazon-cloudwatch-agent.deb"
+    ]
+  }
 
+  # Upload CloudWatch Agent configuration file
+  provisioner "file" {
+    source      = "amazon-cloudwatch-agent.json"
+    destination = "/tmp/amazon-cloudwatch-agent.json"
+  }
+
+  # Configure and start the CloudWatch Agent
+  provisioner "shell" {
+    inline = [
+      "sudo mkdir -p /opt/aws/amazon-cloudwatch-agent/etc",
+      "sudo mv /tmp/amazon-cloudwatch-agent.json /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json",
+      "sudo chown root:root /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json",
+      "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a stop",
+      "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json -s",
+      "sudo systemctl enable amazon-cloudwatch-agent.service"
+    ]
+  }
+
+  # Post-processor to generate manifest
   post-processor "manifest" {
     output = "manifest.json"
   }
