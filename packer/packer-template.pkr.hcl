@@ -140,7 +140,6 @@ build {
     ]
   }
 
-
   # Post-processor to generate manifest
   post-processor "manifest" {
     output = "manifest.json"
