@@ -61,6 +61,7 @@ jobs:
         run: |
           packer build \
             -var "artifact_path=../artifact/webapp.jar" \
+            -var "amazon_cloudwatch_agent_path=amazon-cloudwatch-agent.json" \
             -var "instance_type=t2.micro" \
             -var "region=${{ secrets.AWS_REGION }}" \
             packer-template.pkr.hcl
