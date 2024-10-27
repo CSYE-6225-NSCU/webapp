@@ -110,7 +110,7 @@ build {
 
   # Upload CloudWatch Agent configuration file
   provisioner "file" {
-    source      = var.amazon-cloudwatch-agent
+    source      = "../amazon-cloudwatch-agent.json"
     destination = "/tmp/amazon-cloudwatch-agent.json"
   }
 
