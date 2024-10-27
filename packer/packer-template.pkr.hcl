@@ -113,15 +113,16 @@ build {
   # Upload CloudWatch Agent configuration file to /tmp
   provisioner "file" {
     source      = "cloudwatch-config.json"
-    destination = "/tmp/cloudwatch-config.json"
+    destination = "/tmp/amazon-cloudwatch-agent.json"
   }
 
   # Move the configuration file to /opt and set permissions
   provisioner "shell" {
     inline = [
-      "sudo mv /tmp/cloudwatch-config.json /opt/cloudwatch-config.json",
-      "sudo chown root:root /opt/cloudwatch-config.json",
-      "sudo chmod 644 /opt/cloudwatch-config.json"
+      "sudo mkdir -p /opt/aws/amazon-cloudwatch-agent/etc",
+      "sudo mv /tmp/amazon-cloudwatch-agent.json /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json",
+      "sudo chown root:root /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json",
+      "sudo chmod 644 /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json"
     ]
   }
 
@@ -133,12 +134,11 @@ build {
       "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \\",
       "  -a fetch-config \\",
       "  -m ec2 \\",
-      "  -c file:/opt/cloudwatch-config.json \\",
+      "  -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json \\",
       "  -s",
       "sudo systemctl enable amazon-cloudwatch-agent"
     ]
   }
-
 
   # Post-processor to generate manifest
   post-processor "manifest" {
