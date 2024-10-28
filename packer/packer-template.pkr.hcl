@@ -112,17 +112,27 @@ build {
 
   # Upload CloudWatch Agent configuration file to /tmp
   provisioner "file" {
-    source      = "cloudwatch-config.json"
+    source      = "../artifact/cloudwatch-config.json"
     destination = "/tmp/amazon-cloudwatch-agent.json"
   }
 
-  # Move the configuration file to /opt and set permissions
+  # Verify the file was uploaded
+  provisioner "shell" {
+    inline = [
+      "ls -l /tmp/amazon-cloudwatch-agent.json",
+      "cat /tmp/amazon-cloudwatch-agent.json"
+    ]
+  }
+
+  # Move the configuration file to /opt/aws/amazon-cloudwatch-agent/etc and set permissions
   provisioner "shell" {
     inline = [
       "sudo mkdir -p /opt/aws/amazon-cloudwatch-agent/etc",
       "sudo mv /tmp/amazon-cloudwatch-agent.json /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json",
       "sudo chown root:root /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json",
-      "sudo chmod 644 /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json"
+      "sudo chmod 644 /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json",
+      "ls -l /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json",
+      "cat /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json"
     ]
   }
 

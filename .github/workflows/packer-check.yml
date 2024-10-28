@@ -33,6 +33,7 @@ jobs:
         run: |
           mkdir -p artifact
           cp target/*.jar artifact/webapp.jar
+          cp packer/cloudwatch-config.json artifact/
 
       - name: Run Packer init
         working-directory: packer
