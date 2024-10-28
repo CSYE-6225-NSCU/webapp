@@ -10,7 +10,8 @@
           {
             "file_path": "/var/log/myapp/myapp.log",
             "log_group_name": "csye6225",
-            "log_stream_name": "{instance_id}"
+            "log_stream_name": "{instance_id}",
+            "timezone": "UTC"
           }
         ]
       }

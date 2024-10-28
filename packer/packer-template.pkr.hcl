@@ -1,3 +1,5 @@
+# packer-template.pkr.hcl
+
 # Packer Configuration
 
 packer {
@@ -9,6 +11,7 @@ packer {
   }
 }
 
+# Variables
 variable "artifact_path" {
   description = "The path to the application artifact JAR file"
   type        = string
@@ -35,14 +38,16 @@ locals {
   ami_name = "${var.ami_name_prefix}-${formatdate("YYYYMMDD-HHmm", timestamp())}"
 }
 
+# Source AMI
 source "amazon-ebs" "ubuntu" {
   region        = var.region
   instance_type = var.instance_type
   ami_name      = local.ami_name
   ssh_username  = "ubuntu"
-  source_ami    = "ami-0866a3c8686eaeeba"
+  source_ami    = "ami-0866a3c8686eaeeba" # Ubuntu 22.04 LTS AMI ID
 }
 
+# Build Steps
 build {
   sources = ["source.amazon-ebs.ubuntu"]
 
@@ -124,7 +129,7 @@ build {
     ]
   }
 
-  # Move the configuration file to /opt/aws/amazon-cloudwatch-agent/etc and set permissions
+  # Move the configuration file to /opt and set permissions
   provisioner "shell" {
     inline = [
       "sudo mkdir -p /opt/aws/amazon-cloudwatch-agent/etc",
