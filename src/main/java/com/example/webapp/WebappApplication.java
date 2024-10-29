@@ -7,7 +7,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
-import io.github.cdimascio.dotenv.Dotenv;
 
 @SpringBootApplication
 public class WebappApplication implements CommandLineRunner {
@@ -16,8 +15,6 @@ public class WebappApplication implements CommandLineRunner {
 	private DataSource dataSource;
 
 	public static void main(String[] args) {
-		Dotenv dotenv = Dotenv.configure().load();
-		System.out.println("Loaded environment variable: " + dotenv.get("YOUR_ENV_VARIABLE"));
 		SpringApplication.run(WebappApplication.class, args);
 	}
 
