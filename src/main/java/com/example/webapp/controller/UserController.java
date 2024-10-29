@@ -1,17 +1,31 @@
 package com.example.webapp.controller;
-
+import com.example.webapp.entity.Image;
 import com.example.webapp.entity.User;
 import com.example.webapp.dto.UserUpdateDTO;
+import com.example.webapp.repository.ImageRepository;
 import com.example.webapp.repository.UserRepository;
+import com.example.webapp.service.EmailService;
+import com.timgroup.statsd.NonBlockingStatsDClient;
+import com.timgroup.statsd.StatsDClient;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
+import org.springframework.web.multipart.MultipartFile;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.core.sync.RequestBody;
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 @RestController
 @RequestMapping("/v1/user")
@@ -21,11 +35,25 @@ public class UserController {
     private UserRepository userRepository;
 
     @Autowired
+    private EmailService emailService;
+
+    @Autowired
     private BCryptPasswordEncoder passwordEncoder;
+
+    @Autowired
+    private ImageRepository imageRepository;
+
+    @Value("${aws.s3.bucket.name}")
+    private String bucketName;
+
+    @Value("${aws.s3.region}")
+    private String region;
+
+    private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
 
     @PostMapping
-    public ResponseEntity<User> createUser(@Valid @RequestBody User newUser) {
+    public ResponseEntity<User> createUser(@Valid @org.springframework.web.bind.annotation.RequestBody User newUser) {
 
 
         Optional<User> existingUser = userRepository.findByEmail(newUser.getEmail());
@@ -34,7 +62,7 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         }
 
-
+        statsDClient.incrementCounter("endpoint.user.create.attempt");
         newUser.setPassword(passwordEncoder.encode(newUser.getPassword()));
 
 
@@ -44,6 +72,19 @@ public class UserController {
         // Save the new user
         userRepository.save(newUser);
 
+        // Send email
+        try {
+            String subject = "Welcome to the App!";
+            String content = "Thank you for registering.";
+            emailService.sendEmail(newUser.getEmail(), subject, content);
+        } catch (Exception e) {
+            // Handle email sending failure
+            logger.error("Failed to send email", e);
+        }
+        long dbStartTime = System.currentTimeMillis();
+        userRepository.save(newUser);
+        statsDClient.recordExecutionTime("db.operation.saveUser", System.currentTimeMillis() - dbStartTime);
+        statsDClient.incrementCounter("endpoint.user.create.success");
 
         return ResponseEntity.status(HttpStatus.CREATED).body(newUser);
     }
@@ -62,10 +103,9 @@ public class UserController {
         }
     }
 
-
     @PutMapping("/self")
     public ResponseEntity<Void> updateUser(
-            @Valid @RequestBody UserUpdateDTO updatedUser,
+            @Valid @org.springframework.web.bind.annotation.RequestBody UserUpdateDTO updatedUser,
             Authentication authentication) {
 
 
@@ -105,6 +145,8 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
+
+
         // Other methods here...
 
         // Handle unsupported methods for /v1/user
@@ -118,6 +160,116 @@ public class UserController {
         public ResponseEntity<Void> methodNotAllowedUserSelf() {
             return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).build();
         }
+
+    @PostMapping("/self/pic")
+    public ResponseEntity<Image> uploadProfilePic(
+            @RequestParam("file") MultipartFile file,
+            Authentication authentication) {
+
+        String email = authentication.getName();
+        Optional<User> optionalUser = userRepository.findByEmail(email);
+
+        if (!optionalUser.isPresent()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        User user = optionalUser.get();
+
+        // Validate file type
+        String contentType = file.getContentType();
+        if (!isSupportedContentType(contentType)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        }
+
+        try {
+            // Generate unique file name
+            String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
+
+            // Upload file to S3
+            S3Client s3Client = S3Client.builder()
+                    .region(Region.of(region))
+                    .build();
+
+            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(fileName)
+                    .contentType(contentType)
+                    .build();
+
+            s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
+
+            // Create Image metadata
+            Image image = new Image();
+            image.setFileName(fileName);
+            image.setUrl("https://" + bucketName + ".s3." + region + ".amazonaws.com/" + fileName);
+            image.setUploadDate(LocalDateTime.now());
+            image.setUser(user);
+
+            // Save image metadata
+            imageRepository.save(image);
+
+            // Update user's image
+            user.setImage(image);
+            userRepository.save(user);
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(image);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    // Endpoint to delete image
+    @DeleteMapping("/self/pic")
+    public ResponseEntity<Void> deleteProfilePic(Authentication authentication) {
+
+        String email = authentication.getName();
+        Optional<User> optionalUser = userRepository.findByEmail(email);
+
+        if (!optionalUser.isPresent()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        User user = optionalUser.get();
+        Image image = user.getImage();
+
+        if (image == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+
+        try {
+            // Delete from S3
+            S3Client s3Client = S3Client.builder()
+                    .region(Region.of(region))
+                    .build();
+
+            s3Client.deleteObject(b -> b.bucket(bucketName).key(image.getFileName()));
+
+            // Delete from database
+            imageRepository.delete(image);
+
+            // Remove image from user
+            user.setImage(null);
+            userRepository.save(user);
+
+            return ResponseEntity.noContent().build();
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    // Helper method to validate content type
+    private boolean isSupportedContentType(String contentType) {
+        return contentType.equals("image/png") ||
+                contentType.equals("image/jpg") ||
+                contentType.equals("image/jpeg");
+    }
+    private static final StatsDClient statsDClient = new NonBlockingStatsDClient(
+            "csye6225",
+            "localhost",
+            8125
+    );
 
 
 }

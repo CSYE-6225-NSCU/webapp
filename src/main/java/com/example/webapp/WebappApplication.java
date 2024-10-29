@@ -7,6 +7,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
+import io.github.cdimascio.dotenv.Dotenv;
 
 @SpringBootApplication
 public class WebappApplication implements CommandLineRunner {
