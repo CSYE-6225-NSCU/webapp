@@ -51,6 +51,9 @@ public class User {
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", timezone = "UTC")
     private LocalDateTime accountUpdated;
 
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    private Image image;
+
 
     public User() {
     }
@@ -121,6 +124,15 @@ public class User {
 
     public void setAccountUpdated(LocalDateTime accountUpdated) {
         this.accountUpdated = accountUpdated;
+    }
+
+    public Image getImage() {
+        return image;
+    }
+
+    public void setImage(Image image) {
+        this.image = image;
+        image.setUser(this); // Set the bidirectional relationship
     }
 
 

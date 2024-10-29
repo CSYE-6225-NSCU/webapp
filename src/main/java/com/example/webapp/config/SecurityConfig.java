@@ -45,8 +45,10 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/v1/user").permitAll()
-                        .requestMatchers("/healthz").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/healthz").permitAll()
+                        .requestMatchers("/v1/user/self/pic").authenticated()
                         .anyRequest().authenticated()
+
                 )
                 .authenticationProvider(authProvider())
                 .httpBasic(withDefaults());
