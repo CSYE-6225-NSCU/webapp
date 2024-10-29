@@ -5,6 +5,7 @@ import com.timgroup.statsd.StatsDClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -22,6 +23,7 @@ public class GlobalExceptionHandler {
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
     @Autowired
+    @Lazy
     private StatsDClient statsDClient;
     @Configuration
     public class StatsDConfig {
