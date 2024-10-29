@@ -11,12 +11,6 @@ packer {
   }
 }
 
-# Variables
-variable "artifact_path" {
-  description = "The path to the application artifact JAR file"
-  type        = string
-}
-
 variable "ami_name_prefix" {
   description = "Prefix for the AMI name"
   type        = string
@@ -75,7 +69,7 @@ build {
 
   # Upload the application artifact (JAR file)
   provisioner "file" {
-    source      = var.artifact_path
+    source      = "../artifact/webapp.jar"
     destination = "/tmp/webapp.jar"
   }
 

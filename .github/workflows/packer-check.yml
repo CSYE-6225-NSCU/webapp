@@ -47,7 +47,6 @@ jobs:
         working-directory: packer
         run: |
           packer validate \
-            -var "artifact_path=../artifact/webapp.jar" \
             -var "instance_type=t2.micro" \
             -var "region=${{ secrets.AWS_REGION }}" \
             packer-template.pkr.hcl
