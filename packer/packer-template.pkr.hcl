@@ -75,7 +75,7 @@ build {
 
   # Upload the application artifact (JAR file)
   provisioner "file" {
-    source      = var.artifact_path
+    source      = "../artifact/webapp.jar"
     destination = "/tmp/webapp.jar"
   }
 
