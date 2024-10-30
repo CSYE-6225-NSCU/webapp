@@ -176,7 +176,7 @@ db-config.properties
 database.yml
 
 # Ignore sensitive files
-**/application.properties
+application.properties
 **/application.yml
 **/application.yaml
 # macOS specific
