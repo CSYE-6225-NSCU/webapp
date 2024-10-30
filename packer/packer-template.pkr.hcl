@@ -1,5 +1,7 @@
 # packer-template.pkr.hcl
 
+# Packer Configuration
+
 packer {
   required_plugins {
     amazon = {
@@ -59,6 +61,10 @@ build {
       "export DEBIAN_FRONTEND=noninteractive",
       "sudo apt-get update -y",
       "sudo apt-get upgrade -y",
+      "sudo apt-get install -y software-properties-common",
+      "sudo add-apt-repository universe -y",
+      "sudo add-apt-repository multiverse -y",
+      "sudo apt-get update -y",
       "sudo apt-get install -y openjdk-17-jdk-headless wget unzip"
     ]
   }
