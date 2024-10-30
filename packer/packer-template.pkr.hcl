@@ -54,7 +54,7 @@ build {
 
   # 1. Update and install necessary packages
   provisioner "shell" {
-    name    = "Update and Install Packages"
+    name = "Update and Install Packages"
     inline = [
       "export DEBIAN_FRONTEND=noninteractive",
       "sudo apt-get update -y",
@@ -65,7 +65,7 @@ build {
 
   # 2. Create dedicated user and application directory
   provisioner "shell" {
-    name    = "Create User and Application Directory"
+    name = "Create User and Application Directory"
     inline = [
       "sudo adduser --system --group --no-create-home --shell /usr/sbin/nologin csye6225",
       "sudo mkdir -p /opt/myapp",
@@ -83,7 +83,7 @@ build {
 
   # 4. Move the application artifact to the application directory
   provisioner "shell" {
-    name    = "Deploy Application JAR"
+    name = "Deploy Application JAR"
     inline = [
       "sudo mv /tmp/webapp.jar /opt/myapp/webapp.jar",
       "sudo chown csye6225:csye6225 /opt/myapp/webapp.jar",
@@ -93,7 +93,7 @@ build {
 
   # 5. Create and enable the SystemD service for the application
   provisioner "shell" {
-    name    = "Create SystemD Service"
+    name = "Create SystemD Service"
     inline = [
       "sudo bash -c 'cat <<EOF > /etc/systemd/system/webapp.service\n[Unit]\nDescription=Web Application Service\nAfter=network.target\n\n[Service]\nUser=csye6225\nGroup=csye6225\nEnvironmentFile=/etc/environment\nExecStart=/usr/bin/java -jar /opt/myapp/webapp.jar\nSuccessExitStatus=143\nRestart=on-failure\n\n[Install]\nWantedBy=multi-user.target\nEOF'",
       "sudo systemctl daemon-reload",
@@ -104,7 +104,7 @@ build {
 
   # 6. Install CloudWatch Agent via deb package
   provisioner "shell" {
-    name    = "Install CloudWatch Agent"
+    name = "Install CloudWatch Agent"
     inline = [
       "wget https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb",
       "sudo dpkg -i -E ./amazon-cloudwatch-agent.deb",
@@ -121,7 +121,7 @@ build {
 
   # 8. Move the configuration file to /opt and set permissions
   provisioner "shell" {
-    name    = "Configure CloudWatch Agent"
+    name = "Configure CloudWatch Agent"
     inline = [
       "sudo mkdir -p /opt/aws/amazon-cloudwatch-agent/etc",
       "sudo mv /tmp/amazon-cloudwatch-agent.json /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json",
@@ -133,7 +133,7 @@ build {
 
   # 9. Configure and start the CloudWatch Agent
   provisioner "shell" {
-    name    = "Start CloudWatch Agent"
+    name = "Start CloudWatch Agent"
     inline = [
       "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json -s",
       "sudo systemctl enable amazon-cloudwatch-agent",
@@ -143,7 +143,7 @@ build {
 
   # 10. Clean up APT cache
   provisioner "shell" {
-    name    = "Clean Up APT Cache"
+    name = "Clean Up APT Cache"
     inline = [
       "sudo apt-get clean",
       "sudo rm -rf /var/lib/apt/lists/*"
@@ -152,7 +152,7 @@ build {
 
   # 11. Verify installation (optional but recommended)
   provisioner "shell" {
-    name    = "Verify Installations"
+    name = "Verify Installations"
     inline = [
       "java -version",
       "sudo systemctl status webapp.service",
