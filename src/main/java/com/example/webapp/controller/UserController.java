@@ -43,7 +43,7 @@ public class UserController {
     @Autowired
     private ImageRepository imageRepository;
 
-    @Value("${aws.s3.bucket.name}")
+    @Value("${S3_BUCKET_NAME}")
     private String bucketName;
 
     @Value("${aws.s3.region}")
