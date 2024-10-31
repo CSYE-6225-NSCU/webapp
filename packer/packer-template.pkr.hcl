@@ -80,6 +80,17 @@ build {
     ]
   }
 
+  # After creating the application directory
+  provisioner "shell" {
+    name = "Create Logs Directory"
+    inline = [
+      "sudo mkdir -p /opt/myapp/logs",
+      "sudo chown csye6225:csye6225 /opt/myapp/logs",
+      "sudo chmod 755 /opt/myapp/logs"
+    ]
+  }
+
+
   # 3. Upload the application artifact (JAR file)
   provisioner "file" {
     name        = "Upload Application JAR"
