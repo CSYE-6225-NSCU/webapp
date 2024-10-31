@@ -15,11 +15,14 @@
   },
   "metrics": {
     "metrics_collected": {
-      "statsd": {
-        "service_address": ":8125",
-        "metrics_collection_interval": 10,
-        "metrics_aggregation_interval": 60,
-        "timeout": 60
+      "cpu": {
+        "measurement": [
+          "cpu_usage_idle",
+          "cpu_usage_iowait",
+          "cpu_usage_user",
+          "cpu_usage_system"
+        ],
+        "metrics_collection_interval": 1
       }
     }
   }
