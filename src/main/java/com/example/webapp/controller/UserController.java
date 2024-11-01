@@ -5,7 +5,6 @@ import com.example.webapp.dto.UserUpdateDTO;
 import com.example.webapp.repository.ImageRepository;
 import com.example.webapp.repository.UserRepository;
 import com.example.webapp.service.EmailService;
-import com.timgroup.statsd.NonBlockingStatsDClient;
 import com.timgroup.statsd.StatsDClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -227,9 +226,11 @@ public class UserController {
     public ResponseEntity<Void> deleteProfilePic(Authentication authentication) {
 
         String email = authentication.getName();
+        logger.info("Attempting to delete profile picture for user: {}", email);
         Optional<User> optionalUser = userRepository.findByEmail(email);
 
         if (!optionalUser.isPresent()) {
+            logger.warn("User not found: {}", email);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
@@ -237,30 +238,40 @@ public class UserController {
         Image image = user.getImage();
 
         if (image == null) {
+            logger.warn("No profile picture found for user: {}", email);
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
 
         try {
+            // Log details about the image and S3 configuration
+            logger.info("Deleting image from S3. Bucket: {}, Key: {}", bucketName, image.getFileName());
+            logger.info("AWS Region: {}", region);
+
             // Delete from S3
             S3Client s3Client = S3Client.builder()
                     .region(Region.of(region))
                     .build();
 
             s3Client.deleteObject(b -> b.bucket(bucketName).key(image.getFileName()));
+            logger.info("Deleted image from S3");
 
             // Delete from database
             imageRepository.delete(image);
+            logger.info("Deleted image record from database");
 
             // Remove image from user
             user.setImage(null);
             userRepository.save(user);
+            logger.info("Updated user record to remove image");
 
             return ResponseEntity.noContent().build();
 
         } catch (Exception e) {
+            logger.error("Error deleting profile picture for user {}: {}", email, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
+
 
     // Helper method to validate content type
     private boolean isSupportedContentType(String contentType) {
