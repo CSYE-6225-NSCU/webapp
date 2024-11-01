@@ -7,6 +7,7 @@ import com.example.webapp.repository.ImageRepository;
 import com.example.webapp.repository.UserRepository;
 import com.example.webapp.service.EmailService;
 import com.timgroup.statsd.StatsDClient;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +27,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Bean;
 
 @RestController
 @RequestMapping("/v1/user")
@@ -52,7 +54,19 @@ public class UserController {
     @Value("${aws.s3.region}")
     private String region;
 
+    private S3Client s3Client;
+
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
+
+
+    @Value("${aws.s3.region}")
+
+    @PostConstruct
+    public void init() {
+        this.s3Client = S3Client.builder()
+                .region(Region.of(region))
+                .build();
+    }
 
     @PostMapping
     public ResponseEntity<User> createUser(@Valid @org.springframework.web.bind.annotation.RequestBody User newUser) {
@@ -77,7 +91,6 @@ public class UserController {
             statsDClient.incrementCounter("endpoint.user.create.success");
             logger.info("User created successfully: {}", newUser.getEmail());
 
-            // Send email
             try {
                 String subject = "Welcome to the App!";
                 String content = "Thank you for registering.";
@@ -172,18 +185,6 @@ public class UserController {
         }
     }
 
-    // Handle unsupported methods for /v1/user
-    @RequestMapping(method = {RequestMethod.DELETE, RequestMethod.HEAD, RequestMethod.OPTIONS, RequestMethod.PATCH})
-    public ResponseEntity<Void> methodNotAllowedUser() {
-        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).build();
-    }
-
-    // Handle unsupported methods for /v1/user/self
-    @RequestMapping(value = "/self", method = {RequestMethod.DELETE, RequestMethod.HEAD, RequestMethod.OPTIONS, RequestMethod.PATCH})
-    public ResponseEntity<Void> methodNotAllowedUserSelf() {
-        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).build();
-    }
-
     @PostMapping("/self/pic")
     public ResponseEntity<Image> uploadProfilePic(
             @RequestParam("file") MultipartFile file,
@@ -215,10 +216,15 @@ public class UserController {
         try {
             // Check if user already has an image
             if (user.getImage() != null) {
-                // Delete existing image
-                deleteImageFromS3(user.getImage().getFileName());
-                imageRepository.delete(user.getImage());
-                user.setImage(null);
+                try {
+                    // Delete existing image
+                    deleteImageFromS3(user.getImage().getFileName());
+                    imageRepository.delete(user.getImage());
+                    user.setImage(null);
+                } catch (Exception e) {
+                    logger.error("Error deleting existing image: {}", e.getMessage(), e);
+                    // Continue with upload even if delete fails
+                }
             }
 
             // Generate unique file name
@@ -235,7 +241,7 @@ public class UserController {
             image.setUser(user);
 
             // Save image metadata
-            imageRepository.save(image);
+            image = imageRepository.save(image);
 
             // Update user's image
             user.setImage(image);
@@ -261,81 +267,106 @@ public class UserController {
 
         String email = authentication.getName();
         logger.info("Attempting to delete profile picture for user: {}", email);
-        Optional<User> optionalUser = userRepository.findByEmail(email);
-
-        if (!optionalUser.isPresent()) {
-            logger.warn("User not found: {}", email);
-            statsDClient.incrementCounter("endpoint.user.deletePic.failure");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-
-        User user = optionalUser.get();
-        Image image = user.getImage();
-
-        if (image == null) {
-            logger.warn("No profile picture found for user: {}", email);
-            statsDClient.incrementCounter("endpoint.user.deletePic.failure");
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        }
 
         try {
-            // Delete from S3
-            deleteImageFromS3(image.getFileName());
-            logger.info("Deleted image from S3");
+            Optional<User> optionalUser = userRepository.findByEmail(email);
 
-            // Delete from database
-            imageRepository.delete(image);
-            logger.info("Deleted image record from database");
+            if (!optionalUser.isPresent()) {
+                logger.warn("User not found: {}", email);
+                statsDClient.incrementCounter("endpoint.user.deletePic.failure");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
 
-            // Remove image from user
+            User user = optionalUser.get();
+            Image image = user.getImage();
+
+            if (image == null) {
+                logger.warn("No profile picture found for user: {}", email);
+                statsDClient.incrementCounter("endpoint.user.deletePic.failure");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            }
+
+            // Store filename before removing references
+            String fileName = image.getFileName();
+
+            // First remove the reference from user
             user.setImage(null);
             userRepository.save(user);
-            logger.info("Updated user record to remove image");
+            logger.info("Removed image reference from user");
+
+            // Then delete image metadata
+            imageRepository.delete(image);
+            logger.info("Deleted image metadata from database");
+
+            try {
+                // Finally delete from S3
+                deleteImageFromS3(fileName);
+                logger.info("Successfully deleted image {} from S3", fileName);
+            } catch (Exception e) {
+                logger.error("Failed to delete image from S3: {}", e.getMessage(), e);
+                // Continue even if S3 deletion fails as database is already updated
+            }
 
             statsDClient.incrementCounter("endpoint.user.deletePic.success");
             statsDClient.recordExecutionTime("endpoint.user.deletePic.duration", System.currentTimeMillis() - apiStartTime);
             return ResponseEntity.noContent().build();
 
         } catch (Exception e) {
-            logger.error("Error deleting profile picture for user {}: {}", email, e.getMessage(), e);
+            logger.error("Error in delete profile picture process for user {}: {}", email, e.getMessage(), e);
             statsDClient.incrementCounter("endpoint.user.deletePic.failure");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
-    // Helper method to validate content type
+    // Handle unsupported methods
+    @RequestMapping(method = {RequestMethod.HEAD, RequestMethod.OPTIONS, RequestMethod.PATCH})
+    public ResponseEntity<Void> methodNotAllowedUser() {
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).build();
+    }
+
+    @RequestMapping(value = "/self", method = {RequestMethod.DELETE, RequestMethod.HEAD, RequestMethod.OPTIONS, RequestMethod.PATCH})
+    public ResponseEntity<Void> methodNotAllowedUserSelf() {
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).build();
+    }
+
     private boolean isSupportedContentType(String contentType) {
-        return contentType != null && (contentType.equals("image/png") ||
-                contentType.equals("image/jpg") ||
-                contentType.equals("image/jpeg"));
+        return contentType != null && (
+                contentType.equals("image/png") ||
+                        contentType.equals("image/jpg") ||
+                        contentType.equals("image/jpeg")
+        );
     }
 
-    // Helper method to upload image to S3
     private void uploadImageToS3(MultipartFile file, String fileName, String contentType) throws Exception {
-        S3Client s3Client = S3Client.builder()
-                .region(Region.of(region))
-                .build();
+        logger.info("Starting S3 upload for file: {}", fileName);
+        try {
+            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(fileName)
+                    .contentType(contentType)
+                    .build();
 
-        PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-                .bucket(bucketName)
-                .key(fileName)
-                .contentType(contentType)
-                .build();
-
-        s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
+            s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
+            logger.info("Successfully uploaded file to S3: {}", fileName);
+        } catch (Exception e) {
+            logger.error("Failed to upload file to S3: {}", e.getMessage(), e);
+            throw e;
+        }
     }
 
-    // Helper method to delete image from S3
     private void deleteImageFromS3(String fileName) throws Exception {
-        S3Client s3Client = S3Client.builder()
-                .region(Region.of(region))
-                .build();
+        logger.info("Starting S3 deletion for file: {}", fileName);
+        try {
+            DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(fileName)
+                    .build();
 
-        DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
-                .bucket(bucketName)
-                .key(fileName)
-                .build();
-
-        s3Client.deleteObject(deleteObjectRequest);
+            s3Client.deleteObject(deleteObjectRequest);
+            logger.info("Successfully deleted file from S3: {}", fileName);
+        } catch (Exception e) {
+            logger.error("Failed to delete file from S3: {}", e.getMessage(), e);
+            throw e;
+        }
     }
 }
