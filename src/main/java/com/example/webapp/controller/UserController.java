@@ -35,6 +35,9 @@ public class UserController {
     private UserRepository userRepository;
 
     @Autowired
+    private StatsDClient statsDClient;
+
+    @Autowired
     private EmailService emailService;
 
     @Autowired
@@ -147,19 +150,19 @@ public class UserController {
 
 
 
-        // Other methods here...
+    // Other methods here...
 
-        // Handle unsupported methods for /v1/user
-        @RequestMapping(method = {RequestMethod.DELETE, RequestMethod.HEAD, RequestMethod.OPTIONS, RequestMethod.PATCH})
-        public ResponseEntity<Void> methodNotAllowedUser() {
-            return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).build();
-        }
+    // Handle unsupported methods for /v1/user
+    @RequestMapping(method = {RequestMethod.DELETE, RequestMethod.HEAD, RequestMethod.OPTIONS, RequestMethod.PATCH})
+    public ResponseEntity<Void> methodNotAllowedUser() {
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).build();
+    }
 
-        // Handle unsupported methods for /v1/user/self
-        @RequestMapping(value = "/self", method = {RequestMethod.DELETE, RequestMethod.HEAD, RequestMethod.OPTIONS, RequestMethod.PATCH})
-        public ResponseEntity<Void> methodNotAllowedUserSelf() {
-            return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).build();
-        }
+    // Handle unsupported methods for /v1/user/self
+    @RequestMapping(value = "/self", method = {RequestMethod.DELETE, RequestMethod.HEAD, RequestMethod.OPTIONS, RequestMethod.PATCH})
+    public ResponseEntity<Void> methodNotAllowedUserSelf() {
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).build();
+    }
 
     @PostMapping("/self/pic")
     public ResponseEntity<Image> uploadProfilePic(
@@ -265,11 +268,4 @@ public class UserController {
                 contentType.equals("image/jpg") ||
                 contentType.equals("image/jpeg");
     }
-    private static final StatsDClient statsDClient = new NonBlockingStatsDClient(
-            "csye6225",
-            "localhost",
-            8125
-    );
-
-
 }
