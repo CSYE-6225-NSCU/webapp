@@ -1,8 +1,8 @@
 package com.example.webapp.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
-
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -29,10 +29,10 @@ public class Image {
 
     @OneToOne
     @JoinColumn(name = "user_id")
+    @JsonBackReference
     private User user;
 
-    // Constructors, getters, and setters
-
+    // Constructors
     public Image() {
     }
 

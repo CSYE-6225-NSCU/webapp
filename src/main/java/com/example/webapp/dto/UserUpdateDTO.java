@@ -3,7 +3,7 @@ package com.example.webapp.dto;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.constraints.Size;
 
-@JsonIgnoreProperties(ignoreUnknown = false) // Disallow unknown fields
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class UserUpdateDTO {
 
     @Size(max = 50, message = "First Name must be at most 50 characters")
@@ -15,6 +15,7 @@ public class UserUpdateDTO {
     @Size(min = 8, max = 100, message = "Password must be between 8 and 100 characters")
     private String password;
 
+    // Getters and Setters
 
     public String getFirstName() {
         return firstName;
@@ -24,7 +25,6 @@ public class UserUpdateDTO {
         this.firstName = firstName;
     }
 
-
     public String getLastName() {
         return lastName;
     }
@@ -32,7 +32,6 @@ public class UserUpdateDTO {
     public void setLastName(String lastName) {
         this.lastName = lastName;
     }
-
 
     public String getPassword() {
         return password;

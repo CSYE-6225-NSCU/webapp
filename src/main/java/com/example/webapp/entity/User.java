@@ -2,11 +2,11 @@ package com.example.webapp.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
-
 import java.time.LocalDateTime;
 
 @Entity
@@ -21,8 +21,7 @@ public class User {
     @Column(unique = true, nullable = false)
     @Email(message = "Email should be valid")
     @NotBlank(message = "Email is mandatory")
-    //email check
-    @Pattern(regexp = "^[\\w-\\.]+@[\\w-]+\\.[a-z]{2,3}$", message = "Invalid email address")
+    @Pattern(regexp = "^[\\w-.]+@[\\w-]+\\.[a-z]{2,3}$", message = "Invalid email address")
     @JsonProperty("email")
     private String email;
 
@@ -52,9 +51,10 @@ public class User {
     private LocalDateTime accountUpdated;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    @JsonManagedReference
     private Image image;
 
-
+    // Constructors
     public User() {
     }
 
@@ -65,13 +65,11 @@ public class User {
         this.lastName = lastName;
     }
 
-
-
+    // Getters and Setters
 
     public Long getId() {
         return id;
     }
-
 
     public String getEmail() {
         return email;
@@ -81,7 +79,6 @@ public class User {
         this.email = email;
     }
 
-
     public String getPassword() {
         return password;
     }
@@ -89,7 +86,6 @@ public class User {
     public void setPassword(String password) {
         this.password = password;
     }
-
 
     public String getFirstName() {
         return firstName;
@@ -99,7 +95,6 @@ public class User {
         this.firstName = firstName;
     }
 
-
     public String getLastName() {
         return lastName;
     }
@@ -108,7 +103,6 @@ public class User {
         this.lastName = lastName;
     }
 
-    // accountCreated
     public LocalDateTime getAccountCreated() {
         return accountCreated;
     }
@@ -116,7 +110,6 @@ public class User {
     public void setAccountCreated(LocalDateTime accountCreated) {
         this.accountCreated = accountCreated;
     }
-
 
     public LocalDateTime getAccountUpdated() {
         return accountUpdated;
@@ -132,10 +125,10 @@ public class User {
 
     public void setImage(Image image) {
         this.image = image;
-        image.setUser(this); // Set the bidirectional relationship
+        if (image != null) {
+            image.setUser(this);
+        }
     }
-
-
 
     @PrePersist
     protected void onCreate() {

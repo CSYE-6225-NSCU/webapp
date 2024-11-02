@@ -9,8 +9,8 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.io.BufferedReader;
 import java.io.IOException;
+import com.timgroup.statsd.StatsDClient;
 
 @RestController
 @RequestMapping("/healthz")
@@ -21,22 +21,30 @@ public class HealthCheckController {
     @Autowired
     private DataSource dataSource;
 
+    @Autowired
+    private StatsDClient statsDClient;
+
     @GetMapping
     public ResponseEntity<Void> healthCheck(HttpServletRequest request) {
+        statsDClient.incrementCounter("endpoint.healthz.attempt");
+        long startTime = System.currentTimeMillis();
+
         HttpHeaders headers = new HttpHeaders();
         headers.setCacheControl(CacheControl.noCache().mustRevalidate());
         headers.setPragma("no-cache");
         headers.add("X-Content-Type-Options", "nosniff");
 
         try {
-            if (hasRequestBody(request) || hasQueryParameters(request)) {
-                // Return 400
+            if (requestHasBodyOrParameters(request)) {
+                logger.warn("Health check request contains body or query parameters");
+                statsDClient.incrementCounter("endpoint.healthz.failure");
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .headers(headers)
                         .build();
             }
         } catch (IOException e) {
             logger.error("Error checking request body", e);
+            statsDClient.incrementCounter("endpoint.healthz.failure");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .headers(headers)
                     .build();
@@ -44,13 +52,16 @@ public class HealthCheckController {
 
         try (Connection connection = dataSource.getConnection()) {
             connection.createStatement().executeQuery("SELECT 1");
-            // Return 200
+            logger.info("Health check passed");
+            statsDClient.incrementCounter("endpoint.healthz.success");
+            statsDClient.recordExecutionTime("endpoint.healthz.duration", System.currentTimeMillis() - startTime);
             return ResponseEntity.ok()
                     .headers(headers)
                     .build();
         } catch (SQLException e) {
             logger.error("Database connectivity error", e);
-            // Return 503
+            statsDClient.incrementCounter("endpoint.healthz.failure");
+            statsDClient.recordExecutionTime("endpoint.healthz.duration", System.currentTimeMillis() - startTime);
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                     .headers(headers)
                     .build();
@@ -64,13 +75,12 @@ public class HealthCheckController {
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).build();
     }
 
+    private boolean requestHasBodyOrParameters(HttpServletRequest request) throws IOException {
+        return hasRequestBody(request) || hasQueryParameters(request);
+    }
+
     private boolean hasRequestBody(HttpServletRequest request) throws IOException {
-        if ("GET".equalsIgnoreCase(request.getMethod())) {
-            try (BufferedReader reader = request.getReader()) {
-                return reader.readLine() != null;
-            }
-        }
-        return false;
+        return request.getInputStream().available() > 0;
     }
 
     private boolean hasQueryParameters(HttpServletRequest request) {
