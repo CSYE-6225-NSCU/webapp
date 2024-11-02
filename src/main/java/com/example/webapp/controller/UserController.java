@@ -174,7 +174,7 @@ public class UserController {
 
         } catch (Exception e) {
             logger.error("Error uploading file to S3", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         }
     }
     @DeleteMapping("/self/pic")
@@ -202,7 +202,7 @@ public class UserController {
             s3Client.deleteObject(deleteObjectRequest);
         } catch (Exception e) {
             logger.error("Error deleting file from S3", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         }
 
         // Dissociate the image from the user
