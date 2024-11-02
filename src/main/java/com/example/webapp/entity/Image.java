@@ -29,7 +29,7 @@ public class Image {
     private LocalDateTime uploadDate;
 
     @OneToOne
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id", unique = true)
     @JsonBackReference // Avoids infinite recursion by marking this as the back reference
     private User user;
 
