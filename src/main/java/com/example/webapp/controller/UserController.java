@@ -177,7 +177,6 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
-
     @DeleteMapping("/self/pic")
     public ResponseEntity<Void> deleteImage(Authentication authentication) {
         User currentUser = getCurrentAuthenticatedUser(authentication);
@@ -188,26 +187,33 @@ public class UserController {
         }
 
         try {
+            // Initialize S3 Client
             S3Client s3Client = S3Client.builder()
                     .region(Region.of(region))
                     .build();
 
+            // Create Delete Object Request
             DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
                     .bucket(bucketName)
                     .key(image.getFileName())
                     .build();
 
+            // Delete the object from S3
             s3Client.deleteObject(deleteObjectRequest);
         } catch (Exception e) {
             logger.error("Error deleting file from S3", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
 
+        // Dissociate the image from the user
         currentUser.setImage(null);
+
+        // Save the user, which will cascade the deletion of the image due to orphanRemoval = true
         userRepository.save(currentUser);
 
         return ResponseEntity.noContent().build();
     }
+
 
     @RequestMapping(method = {RequestMethod.DELETE, RequestMethod.HEAD, RequestMethod.OPTIONS, RequestMethod.PATCH})
     public ResponseEntity<Void> methodNotAllowedUser() {

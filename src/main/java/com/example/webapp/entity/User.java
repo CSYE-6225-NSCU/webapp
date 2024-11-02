@@ -123,7 +123,9 @@ public class User {
 
     public void setImage(Image image) {
         this.image = image;
-        image.setUser(this); // Set the bidirectional relationship
+        if (image != null) {
+            image.setUser(this);
+        }
     }
 
     @PrePersist
