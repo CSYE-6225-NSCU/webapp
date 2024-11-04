@@ -1,5 +1,6 @@
 package com.example.webapp.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 
@@ -28,7 +29,8 @@ public class Image {
     private LocalDateTime uploadDate;
 
     @OneToOne
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id", unique = true)
+    @JsonBackReference // Avoids infinite recursion by marking this as the back reference
     private User user;
 
     // Constructors, getters, and setters
@@ -41,8 +43,6 @@ public class Image {
         this.url = url;
         this.uploadDate = uploadDate;
     }
-
-    // Getters and Setters
 
     public UUID getImageId() {
         return imageId;
