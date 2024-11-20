@@ -68,6 +68,8 @@ public class User {
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private LocalDateTime tokenExpiryTime;
 
+
+
     public User() {
     }
 

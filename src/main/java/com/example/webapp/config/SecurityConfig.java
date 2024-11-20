@@ -15,6 +15,8 @@ import org.springframework.security.web.SecurityFilterChain;
 import static org.springframework.security.config.Customizer.withDefaults;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
+import com.example.webapp.filter.VerificationFilter;
 
 @Configuration
 @EnableWebSecurity
@@ -22,6 +24,9 @@ public class SecurityConfig {
 
     @Autowired
     private CustomUserDetailsService userDetailsService;
+
+    @Autowired
+    private VerificationFilter verificationFilter;
 
 
     @Bean
@@ -39,6 +44,7 @@ public class SecurityConfig {
     }
 
 
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -46,12 +52,12 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/v1/user").permitAll()
                         .requestMatchers(HttpMethod.GET, "/healthz").permitAll()
-                        .requestMatchers("/v1/user/self/pic").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/v1/user/verify").permitAll()
                         .anyRequest().authenticated()
-
                 )
                 .authenticationProvider(authProvider())
-                .httpBasic(withDefaults());
+                .httpBasic(withDefaults())
+                .addFilterAfter(verificationFilter, BasicAuthenticationFilter.class);
 
         return http.build();
     }

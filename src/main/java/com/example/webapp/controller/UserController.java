@@ -87,12 +87,8 @@ public class UserController {
         newUser.setAccountCreated(LocalDateTime.now());
         newUser.setAccountUpdated(LocalDateTime.now());
 
-        // Set verified to false and generate verification token
+        // Set verified to false without generating token
         newUser.setVerified(false);
-        String token = UUID.randomUUID().toString();
-        LocalDateTime tokenExpiryTime = LocalDateTime.now().plusMinutes(2);
-        newUser.setVerificationToken(token);
-        newUser.setTokenExpiryTime(tokenExpiryTime);
 
         userRepository.save(newUser);
 
@@ -100,7 +96,6 @@ public class UserController {
         try {
             Map<String, String> message = new HashMap<>();
             message.put("email", newUser.getEmail());
-            message.put("verificationToken", token);
 
             ObjectMapper objectMapper = new ObjectMapper();
             String messageJson = objectMapper.writeValueAsString(message);
