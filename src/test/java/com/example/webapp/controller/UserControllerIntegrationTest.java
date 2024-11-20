@@ -3,6 +3,7 @@ package com.example.webapp.controller;
 import com.example.webapp.entity.User;
 import com.example.webapp.repository.UserRepository;
 import com.example.webapp.service.EmailService; // Assuming EmailService is in this package
+import com.example.webapp.filter.VerificationFilter; // Adjust the package as necessary
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.timgroup.statsd.StatsDClient;
 import org.junit.jupiter.api.BeforeEach;
