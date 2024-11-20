@@ -51,9 +51,22 @@ public class User {
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", timezone = "UTC")
     private LocalDateTime accountUpdated;
 
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL,orphanRemoval = true)
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference // Manages the reference to avoid recursive serialization
     private Image image;
+
+    // New fields added for email verification
+    @Column(nullable = false)
+    @JsonProperty("verified")
+    private boolean verified;
+
+    @Column(name = "verification_token")
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    private String verificationToken;
+
+    @Column(name = "token_expiry_time")
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    private LocalDateTime tokenExpiryTime;
 
     public User() {
     }
@@ -63,7 +76,10 @@ public class User {
         this.password = password;
         this.firstName = firstName;
         this.lastName = lastName;
+        this.verified = false; // Default to false on creation
     }
+
+    // Getters and Setters for all fields, including new ones
 
     public Long getId() {
         return id;
@@ -77,6 +93,7 @@ public class User {
         this.email = email;
     }
 
+    // Password field
     public String getPassword() {
         return password;
     }
@@ -85,6 +102,7 @@ public class User {
         this.password = password;
     }
 
+    // First Name
     public String getFirstName() {
         return firstName;
     }
@@ -93,6 +111,7 @@ public class User {
         this.firstName = firstName;
     }
 
+    // Last Name
     public String getLastName() {
         return lastName;
     }
@@ -101,6 +120,7 @@ public class User {
         this.lastName = lastName;
     }
 
+    // Account Created
     public LocalDateTime getAccountCreated() {
         return accountCreated;
     }
@@ -109,6 +129,7 @@ public class User {
         this.accountCreated = accountCreated;
     }
 
+    // Account Updated
     public LocalDateTime getAccountUpdated() {
         return accountUpdated;
     }
@@ -117,6 +138,7 @@ public class User {
         this.accountUpdated = accountUpdated;
     }
 
+    // Image
     public Image getImage() {
         return image;
     }
@@ -126,6 +148,33 @@ public class User {
         if (image != null) {
             image.setUser(this);
         }
+    }
+
+    // Verified
+    public boolean isVerified() {
+        return verified;
+    }
+
+    public void setVerified(boolean verified) {
+        this.verified = verified;
+    }
+
+    // Verification Token
+    public String getVerificationToken() {
+        return verificationToken;
+    }
+
+    public void setVerificationToken(String verificationToken) {
+        this.verificationToken = verificationToken;
+    }
+
+    // Token Expiry Time
+    public LocalDateTime getTokenExpiryTime() {
+        return tokenExpiryTime;
+    }
+
+    public void setTokenExpiryTime(LocalDateTime tokenExpiryTime) {
+        this.tokenExpiryTime = tokenExpiryTime;
     }
 
     @PrePersist
