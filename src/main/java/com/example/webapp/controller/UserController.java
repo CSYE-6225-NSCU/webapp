@@ -5,7 +5,6 @@ import com.example.webapp.entity.User;
 import com.example.webapp.dto.UserUpdateDTO;
 import com.example.webapp.repository.ImageRepository;
 import com.example.webapp.repository.UserRepository;
-import com.example.webapp.service.EmailService; // You can remove this if not used elsewhere
 import com.timgroup.statsd.NonBlockingStatsDClient;
 import com.timgroup.statsd.StatsDClient;
 import software.amazon.awssdk.services.sns.SnsClient;
@@ -40,10 +39,6 @@ public class UserController {
 
     @Autowired
     private UserRepository userRepository;
-
-    // Remove if not used elsewhere
-    @Autowired
-    private EmailService emailService;
 
     @Autowired
     private BCryptPasswordEncoder passwordEncoder;
