@@ -11,7 +11,6 @@ import software.amazon.awssdk.services.sns.SnsClient;
 import software.amazon.awssdk.services.sns.model.PublishRequest;
 import software.amazon.awssdk.regions.Region;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
@@ -37,36 +36,33 @@ import javax.annotation.PostConstruct;
 @RequestMapping("/v1/user")
 public class UserController {
 
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private BCryptPasswordEncoder passwordEncoder;
-
-    @Autowired
-    private ImageRepository imageRepository;
-
-    @Value("${s3_bucket_name}")
-    private String bucketName;
-
-    @Value("${aws.s3.region}")
-    private String s3Region;
-
-    @Value("${aws.region}")
-    private String awsRegion;
-
-    @Value("${aws.sns.topicArn}")
-    private String snsTopicArn;
-
-    private SnsClient snsClient;
-
+    private final UserRepository userRepository;
+    private final BCryptPasswordEncoder passwordEncoder;
+    private final ImageRepository imageRepository;
+    private final SnsClient snsClient;
+    private final String bucketName;
+    private final String s3Region;
+    private final String snsTopicArn;
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
     private static final StatsDClient statsDClient = new NonBlockingStatsDClient("csye6225", "localhost", 8125);
 
-    @PostConstruct
-    public void init() {
-        snsClient = SnsClient.builder()
-                .region(Region.of(awsRegion))
+    public UserController(
+            UserRepository userRepository,
+            BCryptPasswordEncoder passwordEncoder,
+            ImageRepository imageRepository,
+            @Value("${s3_bucket_name}") String bucketName,
+            @Value("${aws.s3.region}") String s3Region,
+            @Value("${aws.sns.topicArn}") String snsTopicArn) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.imageRepository = imageRepository;
+        this.bucketName = bucketName;
+        this.s3Region = s3Region;
+        this.snsTopicArn = snsTopicArn;
+
+        // Initialize SnsClient
+        this.snsClient = SnsClient.builder()
+                .region(Region.of(s3Region))
                 .build();
     }
 
@@ -81,8 +77,6 @@ public class UserController {
         newUser.setPassword(passwordEncoder.encode(newUser.getPassword()));
         newUser.setAccountCreated(LocalDateTime.now());
         newUser.setAccountUpdated(LocalDateTime.now());
-
-        // Set verified to false without generating token
         newUser.setVerified(false);
 
         userRepository.save(newUser);
@@ -296,14 +290,13 @@ public class UserController {
     }
 
     private boolean isSupportedContentType(String contentType) {
-        return contentType.equals("image/png") ||
+        return contentType != null && (contentType.equals("image/png") ||
                 contentType.equals("image/jpg") ||
-                contentType.equals("image/jpeg");
+                contentType.equals("image/jpeg"));
     }
 
     private User getCurrentAuthenticatedUser(Authentication authentication) {
         String email = authentication.getName();
-        Optional<User> optionalUser = userRepository.findByEmail(email);
-        return optionalUser.orElse(null);
+        return userRepository.findByEmail(email).orElse(null);
     }
 }
