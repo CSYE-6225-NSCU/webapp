@@ -299,4 +299,5 @@ public class UserController {
         String email = authentication.getName();
         return userRepository.findByEmail(email).orElse(null);
     }
+
 }
