@@ -36,6 +36,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "aws.s3.region=us-east-1",
         "AWS_REGION=us-east-1",
         "aws.sns.topicArn=arn:aws:sns:us-east-1:123456789012:user-registration-topic",
+        "sns.topic.arn=arn:aws:sns:us-east-1:123456789012:user-registration-topic",
         "s3_bucket_name=test-bucket",
         "sendgrid.api.key=SG.testkey",
         "logging.level.com.example.webapp=INFO"
