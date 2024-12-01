@@ -8,6 +8,8 @@ import com.example.webapp.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.timgroup.statsd.NonBlockingStatsDClient;
 import com.timgroup.statsd.StatsDClient;
+import jakarta.validation.Valid;
+import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.services.sns.SnsClient;
 import software.amazon.awssdk.services.sns.model.PublishRequest;
 import software.amazon.awssdk.regions.Region;
@@ -29,6 +31,7 @@ import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.sns.SnsClient;
 import software.amazon.awssdk.services.sns.model.PublishRequest;
+import org.slf4j.Logger;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -83,6 +86,7 @@ public class UserController {
 
         userRepository.save(newUser);
 
+        logger.info("SNS Topic ARN: {}", snsTopicArn);
         // Publish message to SNS
         try {
             Map<String, String> message = new HashMap<>();
