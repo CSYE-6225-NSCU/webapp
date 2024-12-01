@@ -83,7 +83,6 @@ public class UserController {
         newUser.setAccountCreated(LocalDateTime.now());
         newUser.setAccountUpdated(LocalDateTime.now());
         newUser.setVerified(false);
-
         userRepository.save(newUser);
 
         logger.info("SNS Topic ARN: {}", snsTopicArn);
