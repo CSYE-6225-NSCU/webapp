@@ -1,15 +1,14 @@
+# packer-template.pkr.hcl
+
+# Packer Configuration
+
 packer {
   required_plugins {
     amazon = {
       source  = "github.com/hashicorp/amazon"
-      version = "~> 1"
+      version = "~> 1.0"
     }
   }
-}
-
-variable "artifact_path" {
-  description = "The path to the application artifact JAR file"
-  type        = string
 }
 
 variable "ami_name_prefix" {
@@ -21,44 +20,58 @@ variable "ami_name_prefix" {
 variable "instance_type" {
   description = "EC2 instance type"
   type        = string
+  default     = "t2.micro"
 }
 
-variable "source_ami" {
-  description = "EC2 source AMI id"
+variable "region" {
+  description = "AWS region to build the AMI in"
   type        = string
-  default     = "ami-0866a3c8686eaeeba"
+  default     = "us-east-1"
 }
 
 locals {
   ami_name = "${var.ami_name_prefix}-${formatdate("YYYYMMDD-HHmm", timestamp())}"
 }
 
+# Source AMI
 source "amazon-ebs" "ubuntu" {
+  region        = var.region
   instance_type = var.instance_type
   ami_name      = local.ami_name
   ssh_username  = "ubuntu"
-  source_ami    = var.source_ami
+  source_ami_filter {
+    filters = {
+      virtualization-type = "hvm"
+      name                = "ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"
+      root-device-type    = "ebs"
+    }
+    owners      = ["099720109477"] # Canonical
+    most_recent = true
+  }
 }
 
+# Build Steps
 build {
   sources = ["source.amazon-ebs.ubuntu"]
 
-  # 1. Install Java 17, PostgreSQL, unzip, curl, jq, and AWS CLI
+  # 1. Update and install necessary packages
   provisioner "shell" {
+    name = "Update and Install Packages"
     inline = [
-      "sudo apt-get update",
+      "export DEBIAN_FRONTEND=noninteractive",
+      "sudo apt-get update -y",
       "sudo apt-get upgrade -y",
-      "sudo apt-get install -y openjdk-17-jdk unzip curl jq",
-
-      # Install AWS CLI v2
-      "curl \"https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip\" -o \"awscliv2.zip\"",
-      "unzip awscliv2.zip",
-      "sudo ./aws/install",
+      "sudo apt-get install -y software-properties-common",
+      "sudo add-apt-repository universe -y",
+      "sudo add-apt-repository multiverse -y",
+      "sudo apt-get update -y",
+      "sudo apt-get install -y openjdk-17-jdk-headless wget unzip"
     ]
   }
 
-  # 2. Create the non-login user csye6225 and set directory permissions
+  # 2. Create dedicated user and application directory
   provisioner "shell" {
+    name = "Create User and Application Directory"
     inline = [
       "sudo adduser --system --group --no-create-home --shell /usr/sbin/nologin csye6225",
       "sudo mkdir -p /opt/myapp",
@@ -67,13 +80,27 @@ build {
     ]
   }
 
-  # 3. Copy the JAR from the local file to the instance
+  # After creating the application directory
+  provisioner "shell" {
+    name = "Create Logs Directory"
+    inline = [
+      "sudo mkdir -p /opt/myapp/logs",
+      "sudo chown csye6225:csye6225 /opt/myapp/logs",
+      "sudo chmod 755 /opt/myapp/logs"
+    ]
+  }
+
+
+  # 3. Upload the application artifact (JAR file)
   provisioner "file" {
-    source      = var.artifact_path
+    name        = "Upload Application JAR"
+    source      = "../artifact/webapp.jar"
     destination = "/tmp/webapp.jar"
   }
 
+  # 4. Move the application artifact to the application directory
   provisioner "shell" {
+    name = "Deploy Application JAR"
     inline = [
       "sudo mv /tmp/webapp.jar /opt/myapp/webapp.jar",
       "sudo chown csye6225:csye6225 /opt/myapp/webapp.jar",
@@ -81,39 +108,79 @@ build {
     ]
   }
 
-  # 4. Configure the systemd service (user data will set environment variables)
+  # 5. Create and enable the SystemD service for the application
   provisioner "shell" {
+    name = "Create SystemD Service"
     inline = [
-      # Create a systemd service to run the application
-      "sudo bash -c 'cat <<EOF > /etc/systemd/system/webapp.service\n[Unit]\nDescription=CSYE6225 WebApp\nAfter=network.target\n\n[Service]\nUser=csye6225\nEnvironmentFile=/etc/environment\nExecStart=/usr/bin/java -jar /opt/myapp/webapp.jar\nWorkingDirectory=/opt/myapp\nRestart=always\n\n[Install]\nWantedBy=multi-user.target\nEOF'",
-
-      # Reload systemd and enable the service
+      "sudo bash -c 'cat <<EOF > /etc/systemd/system/webapp.service\n[Unit]\nDescription=Web Application Service\nAfter=network.target\n\n[Service]\nUser=csye6225\nGroup=csye6225\nEnvironmentFile=/etc/environment\nExecStart=/usr/bin/java -jar /opt/myapp/webapp.jar\nSuccessExitStatus=143\nRestart=on-failure\n\n[Install]\nWantedBy=multi-user.target\nEOF'",
       "sudo systemctl daemon-reload",
-      "sudo systemctl enable webapp.service"
+      "sudo systemctl enable webapp.service",
+      "sudo systemctl start webapp.service"
     ]
   }
 
+  # 6. Install CloudWatch Agent via deb package
   provisioner "shell" {
+    name = "Install CloudWatch Agent"
     inline = [
-      "sudo mkdir -p /var/log/myapp",
-      "sudo chown csye6225:csye6225 /var/log/myapp",
-      "sudo chmod 755 /var/log/myapp"
-    ]
-  }
-
-  # 5. Install and Configure CloudWatch Agent
-  provisioner "shell" {
-    inline = [
-      # Download and install the CloudWatch Agent
-      "cd /tmp",
-      "curl -O https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb",
+      "wget https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb",
       "sudo dpkg -i -E ./amazon-cloudwatch-agent.deb",
-
-      # Create the CloudWatch Agent configuration file
-      "sudo tee /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json <<EOF\n{\n  \"logs\": {\n    \"logs_collected\": {\n      \"files\": {\n        \"collect_list\": [\n          {\n            \"file_path\": \"/var/log/myapp/application.log\",\n            \"log_group_name\": \"myapp-log-group\",\n            \"log_stream_name\": \"{instance_id}\",\n            \"timezone\": \"UTC\"\n          }\n        ]\n      }\n    }\n  },\n  \"metrics\": {\n    \"namespace\": \"WebApp\",\n    \"metrics_collected\": {\n      \"statsd\": {\n        \"service_address\": \"localhost:8125\"\n      }\n    }\n  }\n}\nEOF",
-
-      # Start the CloudWatch Agent with the configuration
-      "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json -s"
+      "rm -f amazon-cloudwatch-agent.deb"
     ]
+  }
+
+  # 7. Upload CloudWatch Agent configuration file
+  provisioner "file" {
+    name        = "Upload CloudWatch Config"
+    source      = "../artifact/cloudwatch-config.json"
+    destination = "/tmp/amazon-cloudwatch-agent.json"
+  }
+
+  # 8. Move the configuration file to /opt and set permissions
+  provisioner "shell" {
+    name = "Configure CloudWatch Agent"
+    inline = [
+      "sudo mkdir -p /opt/aws/amazon-cloudwatch-agent/etc",
+      "sudo mv /tmp/amazon-cloudwatch-agent.json /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json",
+      "sudo chown root:root /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json",
+      "sudo chmod 644 /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json",
+      "sudo systemctl daemon-reload"
+    ]
+  }
+
+  # 9. Configure and start the CloudWatch Agent
+  provisioner "shell" {
+    name = "Start CloudWatch Agent"
+    inline = [
+      "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json -s",
+      "sudo systemctl enable amazon-cloudwatch-agent",
+      "sudo systemctl start amazon-cloudwatch-agent"
+    ]
+  }
+
+  # 10. Clean up APT cache
+  provisioner "shell" {
+    name = "Clean Up APT Cache"
+    inline = [
+      "sudo apt-get clean",
+      "sudo rm -rf /var/lib/apt/lists/*"
+    ]
+  }
+
+  # 11. Verify installation (optional but recommended)
+  provisioner "shell" {
+    name = "Verify Installations"
+    inline = [
+      "java -version",
+      "sudo systemctl status webapp.service",
+      "sudo systemctl status amazon-cloudwatch-agent",
+      "ls -l /opt/myapp/webapp.jar",
+      "cat /etc/systemd/system/webapp.service"
+    ]
+  }
+
+  # Post-processor to generate manifest
+  post-processor "manifest" {
+    output = "manifest.json"
   }
 }
