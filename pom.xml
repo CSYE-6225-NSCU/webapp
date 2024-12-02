@@ -23,6 +23,7 @@
 	<properties>
 		<java.version>17</java.version>
 		<aws.sdk.version>2.20.87</aws.sdk.version>
+		<aws.sdk.v1.version>1.12.539</aws.sdk.v1.version>
 	</properties>
 
 	<dependencies>
@@ -32,7 +33,7 @@
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
 
-		<!-- Dotenv for environment variables (if needed) -->
+		<!-- Dotenv for environment variables -->
 		<dependency>
 			<groupId>io.github.cdimascio</groupId>
 			<artifactId>dotenv-java</artifactId>
@@ -78,6 +79,13 @@
 			<version>${aws.sdk.version}</version>
 		</dependency>
 
+		<!-- AWS SDK v1 for S3 -->
+		<dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>aws-java-sdk-s3</artifactId>
+			<version>${aws.sdk.v1.version}</version>
+		</dependency>
+
 		<!-- SendGrid Java Library -->
 		<dependency>
 			<groupId>com.sendgrid</groupId>
@@ -106,11 +114,17 @@
 			<version>1.15.0</version>
 		</dependency>
 
-		<!-- Javax Annotation API -->
+		<!-- Jakarta Annotation API -->
 		<dependency>
-			<groupId>javax.annotation</groupId>
-			<artifactId>javax.annotation-api</artifactId>
-			<version>1.2</version>
+			<groupId>jakarta.annotation</groupId>
+			<artifactId>jakarta.annotation-api</artifactId>
+			<version>2.1.1</version>
+		</dependency>
+
+		<!-- SLF4J API (Logging) -->
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
 		</dependency>
 
 		<!-- Testing Dependencies -->
@@ -119,6 +133,13 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
+			<exclusions>
+				<!-- Exclude conflicting versions -->
+				<exclusion>
+					<groupId>org.junit.vintage</groupId>
+					<artifactId>junit-vintage-engine</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 
 		<!-- Mockito Core -->
@@ -154,5 +175,4 @@
 			</plugin>
 		</plugins>
 	</build>
-
 </project>
