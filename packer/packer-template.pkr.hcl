@@ -64,11 +64,6 @@ variable "artifact_path" {
   description = "The path to the application artifact (JAR file)"
 }
 
-variable "instance_type" {
-  type    = string
-  description = "The EC2 instance type to use"
-}
-
 variable "source_ami" {
   type    = string
   description = "The base/source AMI ID to use for building the custom AMI"
