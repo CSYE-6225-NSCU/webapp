@@ -1,52 +1,78 @@
 package com.csye6225.webapp.controller;
 
-import com.csye6225.webapp.service.HealthCheckService;
-import com.timgroup.statsd.StatsDClient;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.*;
+import org.springframework.web.bind.annotation.*;
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.SQLException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import java.io.BufferedReader;
+import java.io.IOException;
 
 @RestController
-@RequestMapping("/healthz")
+@RequestMapping
 public class HealthCheckController {
 
-    @Autowired
-    private HealthCheckService healthCheckService;
+    private static final Logger logger = LoggerFactory.getLogger(HealthCheckController.class);
 
     @Autowired
-    private StatsDClient statsDClient;
+    private DataSource dataSource;
 
-    @GetMapping
-    @RequestMapping(method = RequestMethod.GET)
+    @GetMapping({"/healthz", "/CICD"})
     public ResponseEntity<Void> healthCheck(HttpServletRequest request) {
-        // Start the timer for this API
-        long start = System.currentTimeMillis();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setCacheControl(CacheControl.noCache().mustRevalidate());
+        headers.setPragma("no-cache");
+        headers.add("X-Content-Type-Options", "nosniff");
 
-        statsDClient.incrementCounter("api.healthz.call_count");
-
-        if (request.getContentLength() > 0 || request.getQueryString() != null) {
-            long duration = System.currentTimeMillis() - start;
-            statsDClient.recordExecutionTime("api.healthz.time", duration);
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        try {
+            if (hasRequestBody(request) || hasQueryParameters(request)) {
+                // Return 400
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .headers(headers)
+                        .build();
+            }
+        } catch (IOException e) {
+            logger.error("Error checking request body", e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .headers(headers)
+                    .build();
         }
 
-        boolean isDbConnected = healthCheckService.isDatabaseConnected();
-
-        long duration = System.currentTimeMillis() - start;
-        statsDClient.recordExecutionTime("api.healthz.time", duration);
-
-        if (isDbConnected) {
-            return ResponseEntity.ok().header("Cache-Control", "no-cache").build();
-        } else {
+        try (Connection connection = dataSource.getConnection()) {
+            connection.createStatement().executeQuery("SELECT 1");
+            // Return 200
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .build();
+        } catch (SQLException e) {
+            logger.error("Database connectivity error", e);
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                    .header("Cache-Control", "no-cache")
+                    .headers(headers)
                     .build();
         }
     }
 
+    // Handle unsupported HTTP methods
+    @RequestMapping(method = { RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.HEAD,
+            RequestMethod.OPTIONS, RequestMethod.PATCH })
+    public ResponseEntity<Void> methodNotAllowed() {
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).build();
+    }
+
+    private boolean hasRequestBody(HttpServletRequest request) throws IOException {
+        if ("GET".equalsIgnoreCase(request.getMethod())) {
+            try (BufferedReader reader = request.getReader()) {
+                return reader.readLine() != null;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasQueryParameters(HttpServletRequest request) {
+        return request.getQueryString() != null && !request.getQueryString().isEmpty();
+    }
 }
