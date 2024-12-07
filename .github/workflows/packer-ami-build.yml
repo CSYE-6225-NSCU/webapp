@@ -1,91 +1,156 @@
-name: Packer AMI Build and Share
+name: Build and Deploy AMI
 
 on:
-  push:
-    branches:
-      - main
+  pull_request:
+    types: [closed]
   workflow_dispatch:
 
 jobs:
-  build-and-share-ami:
+  build-and-deploy:
+    if: github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout Code
         uses: actions/checkout@v3
 
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
-          java-version: '17'
           distribution: 'temurin'
+          java-version: '17'
 
-      - name: Build Application
-        run: mvn clean package
-
-      - name: Prepare Artifact
-        run: |
-          mkdir -p artifact
-          cp target/*.jar artifact/webapp.jar
-          cp packer/cloudwatch-config.json artifact/
-
-      - name: Install Packer
-        uses: hashicorp/setup-packer@v2
+      - name: Cache Maven packages
+        uses: actions/cache@v3
         with:
-          version: '1.11.2'  # Specify the desired Packer version
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
 
-      - name: Configure AWS Credentials
+      - name: Run Tests
+        run: mvn test
+
+      - name: Build JAR
+        run: mvn clean package -DskipTests=false
+
+      - name: Upload JAR Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: webapp-jar
+          path: target/*.jar
+
+      - name: Configure AWS Credentials (Dev)
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: us-east-1
+
+      - name: Upgrade OS packages
+        run: |
+          sudo apt-get update
+          sudo apt-get upgrade -y
+
+      - name: Download JAR Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: webapp-jar
+
+      - name: Install Packer
+        run: |
+          curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+          sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+          sudo apt-get update && sudo apt-get install -y packer
 
       - name: Initialize Packer
-        working-directory: packer
-        run: packer init .
+        run: |
+          cd packer
+          packer init packer-template.pkr.hcl
 
       - name: Validate Packer Template
-        working-directory: packer
         run: |
-          packer validate \
-            -var "instance_type=t2.micro" \
-            -var "region=${{ secrets.AWS_REGION }}" \
-            packer-template.pkr.hcl
+          cd packer
+          packer validate packer-template.pkr.hcl
 
-      - name: Build AMI
-        working-directory: packer
+      - name: Deploy AMI with Packer
+        id: packer
         run: |
+          cd packer
           packer build \
-            -var "instance_type=t2.micro" \
-            -var "region=${{ secrets.AWS_REGION }}" \
-            packer-template.pkr.hcl
+            -machine-readable packer-template.pkr.hcl | tee build.log
 
-      - name: List Packer Directory Contents
-        run: |
-          echo "Listing contents of packer directory:"
-          ls -la packer
+          AMI_ID=$(awk -F, '$0 ~/artifact,0,id/ {print $6}' build.log | sed 's/.*ami-/ami-/')
+          echo "AMI_ID=$AMI_ID" >> $GITHUB_ENV
 
-      - name: Extract AMI ID
-        id: extract_ami
+      - name: Share AMI with target account
         run: |
-          # Verify if manifest.json exists
-          if [ ! -f packer/manifest.json ]; then
-            echo "Error: manifest.json not found in packer directory."
-            exit 1
-          fi
-          # Extract the AMI ID without the source prefix
-          AMI_ID=$(jq -r '.builds[0].artifact_id' packer/manifest.json | cut -d':' -f2)
-          # Validate AMI_ID format
-          if [[ ! $AMI_ID =~ ^ami-[0-9a-fA-F]{8,17}$ ]]; then
-            echo "Error: Extracted AMI ID is invalid: $AMI_ID"
-            exit 1
-          fi
-          echo "AMI_ID=${AMI_ID}" >> $GITHUB_ENV
-
-      - name: Share AMI with Demo Account
-        run: |
-          DEMO_ACCOUNT_ID="503561445917"  
           aws ec2 modify-image-attribute \
-            --image-id $AMI_ID \
-            --launch-permission "Add=[{UserId=${DEMO_ACCOUNT_ID}}]"
+            --image-id ${{ env.AMI_ID }} \
+            --launch-permission "{\"Add\":[{\"UserId\":\"${{ secrets.TARGET_ACCOUNT_ID }}\"}]}"
+
+      - name: Configure AWS Credentials (Prod/Demo)
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_PROD_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_PROD_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Create New Launch Template Version
+        id: launch-template
+        run: |
+          LAUNCH_TEMPLATE_NAME=${{ secrets.LAUNCH_TEMPLATE_NAME }}
+          AMI_ID=${{ env.AMI_ID }}
+          INSTANCE_TYPE=${{ secrets.INSTANCE_TYPE }}
+
+          BASE_TEMPLATE=$(aws ec2 describe-launch-template-versions \
+            --launch-template-name "$LAUNCH_TEMPLATE_NAME" \
+            --versions "\$Latest" \
+            --query 'LaunchTemplateVersions[0].LaunchTemplateData' \
+            --output json)
+
+          UPDATED_TEMPLATE=$(echo "$BASE_TEMPLATE" | jq \
+            --arg ami "$AMI_ID" \
+            --arg instanceType "$INSTANCE_TYPE" \
+            '.ImageId = $ami | .InstanceType = $instanceType')
+
+          LAUNCH_TEMPLATE_VERSION=$(aws ec2 create-launch-template-version \
+            --launch-template-name "$LAUNCH_TEMPLATE_NAME" \
+            --source-version "\$Latest" \
+            --launch-template-data "$UPDATED_TEMPLATE" \
+            --query 'LaunchTemplateVersion.VersionNumber' \
+            --output text)
+
+          echo "LAUNCH_TEMPLATE_VERSION=$LAUNCH_TEMPLATE_VERSION" >> $GITHUB_ENV
+      - name: Update Auto Scaling Group
+        run: >
+          aws autoscaling update-auto-scaling-group \
+            --auto-scaling-group-name "${{ secrets.ASG_NAME }}" \
+            --launch-template "LaunchTemplateName=${{ secrets.LAUNCH_TEMPLATE_NAME }},Version=$LAUNCH_TEMPLATE_VERSION"
+      - name: Start Instance Refresh
+        id: instance-refresh
+        run: >
+          INSTANCE_REFRESH_ID=$(aws autoscaling start-instance-refresh \
+            --auto-scaling-group-name "${{ secrets.ASG_NAME }}" \
+            --preferences '{"InstanceWarmup": 300, "MinHealthyPercentage": 50}' \
+            --query 'InstanceRefreshId' --output text)
+          echo "INSTANCE_REFRESH_ID=$INSTANCE_REFRESH_ID" >> $GITHUB_ENV
+      - name: Wait for Instance Refresh to Complete
+        run: >
+          while true; do
+            STATUS=$(aws autoscaling describe-instance-refreshes \
+              --auto-scaling-group-name "${{ secrets.ASG_NAME }}" \
+              --query "InstanceRefreshes[?InstanceRefreshId=='${{ env.INSTANCE_REFRESH_ID }}'].Status" \
+              --output text)
+            echo "Instance Refresh Status: $STATUS"
+            if [ "$STATUS" == "Successful" ]; then
+              echo "Instance refresh completed successfully."
+              break
+            elif [ "$STATUS" == "Failed" ]; then
+              echo "Instance refresh failed."
+              exit 1
+            fi
+            sleep 30
+          done
+      - name: Deployment Completed
+        run: echo "Deployment with AMI ${{ env.AMI_ID }} completed successfully."

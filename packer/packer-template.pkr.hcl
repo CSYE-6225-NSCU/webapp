@@ -29,6 +29,13 @@ variable "region" {
   default     = "us-east-1"
 }
 
+variable "source_ami" {
+  type    = string
+  description = "The base/source AMI ID to use for building the custom AMI"
+  default     = "ami-0866a3c8686eaeeba"
+}
+
+
 locals {
   ami_name = "${var.ami_name_prefix}-${formatdate("YYYYMMDD-HHmm", timestamp())}"
 }
@@ -94,7 +101,7 @@ build {
   # 3. Upload the application artifact (JAR file)
   provisioner "file" {
     name        = "Upload Application JAR"
-    source      = "../artifact/webapp.jar"
+    source      = "../target/webapp-0.0.1-SNAPSHOT.jar"
     destination = "/tmp/webapp.jar"
   }
 
