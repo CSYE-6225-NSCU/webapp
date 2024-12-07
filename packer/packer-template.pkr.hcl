@@ -29,6 +29,13 @@ variable "region" {
   default     = "us-east-1"
 }
 
+variable "source_ami" {
+  type    = string
+  description = "The base/source AMI ID to use for building the custom AMI"
+  default     = "ami-0866a3c8686eaeeba"
+}
+
+
 locals {
   ami_name = "${var.ami_name_prefix}-${formatdate("YYYYMMDD-HHmm", timestamp())}"
 }
