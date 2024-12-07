@@ -1,0 +1,8 @@
+artifact_path                ="../artifact/webapp.jar"
+instance_type                ="t2.micro"
+amazon_cloudwatch_agent_path ="/cloudwatch-config.json"
+vpc_id                       ="${{ secrets.AWS_VPC_ID }}"
+subnet_id                    ="${{ secrets.AWS_SUBNET_ID }}"
+db_url                       ="${{ secrets.DB_URL }}"
+db_username                  ="${{ secrets.DB_USERNAME }}"
+db_password                  ="${{ secrets.DB_PASSWORD }}"
