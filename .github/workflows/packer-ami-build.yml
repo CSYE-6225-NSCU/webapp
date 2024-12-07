@@ -69,42 +69,20 @@ jobs:
           packer validate packer-template.pkr.hcl
 
       - name: Deploy AMI with Packer
+        id: packer
         run: |
           cd packer
           packer build \
-            -var "db_url=${{ secrets.DB_URL }}" \
-            -var "db_name=${{ secrets.DB_NAME }}" \
-            -var "db_username=${{ secrets.DB_USERNAME }}" \
-            -var "db_password=${{ secrets.DB_PASSWORD }}" \
-            -var "artifact_path=../target/webapp-0.0.1-SNAPSHOT.jar" \
-            -var "vpc_id=${{ secrets.AWS_VPC_ID }}" \
-            -var "subnet_id=${{ secrets.AWS_SUBNET_ID }}" \
-            packer-template.pkr.hcl
-      
+            -machine-readable packer-template.pkr.hcl | tee build.log
 
-      - name: Extract AMI ID
-        id: extract_ami
-        run: |
-          # Verify if manifest.json exists
-          if [ ! -f packer/manifest.json ]; then
-            echo "Error: manifest.json not found in packer directory."
-            exit 1
-          fi
-          # Extract the AMI ID without the source prefix
-          AMI_ID=$(jq -r '.builds[0].artifact_id' packer/manifest.json | cut -d':' -f2)
-          # Validate AMI_ID format
-          if [[ ! $AMI_ID =~ ^ami-[0-9a-fA-F]{8,17}$ ]]; then
-            echo "Error: Extracted AMI ID is invalid: $AMI_ID"
-            exit 1
-          fi
-          echo "AMI_ID=${AMI_ID}" >> $GITHUB_ENV
+          AMI_ID=$(awk -F, '$0 ~/artifact,0,id/ {print $6}' build.log | sed 's/.*ami-/ami-/')
+          echo "AMI_ID=$AMI_ID" >> $GITHUB_ENV
 
-      - name: Share AMI with Demo Account
+      - name: Share AMI with target account
         run: |
-          DEMO_ACCOUNT_ID="503561445917"  
           aws ec2 modify-image-attribute \
-            --image-id $AMI_ID \
-            --launch-permission "Add=[{UserId=${DEMO_ACCOUNT_ID}}]"
+            --image-id ${{ env.AMI_ID }} \
+            --launch-permission "{\"Add\":[{\"UserId\":\"${{ secrets.TARGET_ACCOUNT_ID }}\"}]}"
 
       - name: Configure AWS Credentials (Prod/Demo)
         uses: aws-actions/configure-aws-credentials@v2
