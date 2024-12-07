@@ -70,12 +70,12 @@ jobs:
       - name: Initialize Packer
         run: |
           cd packer
-          packer init main.pkr.hcl
+          packer init packer-template.pkr.hcl
 
       - name: Validate Packer Template
         run: |
           cd packer
-          packer validate main.pkr.hcl
+          packer validate packer-template.pkr.hcl
 
       - name: Deploy AMI with Packer
         id: packer
@@ -91,7 +91,7 @@ jobs:
             -var "db_username=${{ secrets.DB_USERNAME }}" \
             -var "db_password=${{ secrets.DB_PASSWORD }}" \
             -var "db_url=${{ secrets.DB_URL }}" \
-            -machine-readable main.pkr.hcl | tee build.log
+            -machine-readable packer-template.pkr.hcl | tee build.log
 
           AMI_ID=$(awk -F, '$0 ~/artifact,0,id/ {print $6}' build.log | sed 's/.*ami-/ami-/')
           echo "AMI_ID=$AMI_ID" >> $GITHUB_ENV
