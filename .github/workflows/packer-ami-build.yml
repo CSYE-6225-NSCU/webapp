@@ -87,6 +87,12 @@ jobs:
           AMI_ID=$(awk -F, '$0 ~/artifact,0,id/ {print $6}' build.log | sed 's/.*ami-/ami-/')
           echo "AMI_ID=$AMI_ID" >> $GITHUB_ENV
 
+      - name: Share AMI with target account
+        run: |
+          aws ec2 modify-image-attribute \
+            --image-id ${{ env.AMI_ID }} \
+            --launch-permission "{\"Add\":[{\"UserId\":\"${{ secrets.TARGET_ACCOUNT_ID }}\"}]}"
+
       - name: Configure AWS Credentials (Prod/Demo)
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -94,11 +100,6 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_PROD_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Share AMI with target account
-        run: |
-          aws ec2 modify-image-attribute \
-            --image-id ${{ env.AMI_ID }} \
-            --launch-permission "{\"Add\":[{\"UserId\":\"${{ secrets.TARGET_ACCOUNT_ID }}\"}]}"
 
       - name: Create New Launch Template Version
         id: launch-template
