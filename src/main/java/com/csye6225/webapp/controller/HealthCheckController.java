@@ -15,7 +15,6 @@ import java.io.IOException;
 @RestController
 @RequestMapping
 public class HealthCheckController {
-
     private static final Logger logger = LoggerFactory.getLogger(HealthCheckController.class);
 
     @Autowired
