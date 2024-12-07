@@ -1,9 +1,11 @@
 package com.example.webapp.controller;
 
 import com.example.webapp.entity.Image;
+import com.example.webapp.entity.SentEmail;
 import com.example.webapp.entity.User;
 import com.example.webapp.dto.UserUpdateDTO;
 import com.example.webapp.repository.ImageRepository;
+import com.example.webapp.repository.SentEmailRepository;
 import com.example.webapp.repository.UserRepository;
 import com.timgroup.statsd.NonBlockingStatsDClient;
 import com.timgroup.statsd.StatsDClient;
@@ -24,6 +26,8 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.core.sync.RequestBody;
+
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.Optional;
@@ -62,6 +66,8 @@ public class UserController {
 
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
     private static final StatsDClient statsDClient = new NonBlockingStatsDClient("csye6225", "localhost", 8125);
+    @Autowired
+    private SentEmailRepository sentEmailRepository;
 
     @PostConstruct
     public void init() {
@@ -267,23 +273,37 @@ public class UserController {
 
     @GetMapping("/verify")
     public ResponseEntity<String> verifyEmail(@RequestParam("token") String token) {
-        Optional<User> optionalUser = userRepository.findByVerificationToken(token);
-        if (!optionalUser.isPresent()) {
+        Optional<SentEmail> optionalSentEmail = sentEmailRepository.findByToken(token);
+        if (!optionalSentEmail.isPresent()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid verification token.");
         }
 
-        User user = optionalUser.get();
-        if (user.getTokenExpiryTime().isBefore(LocalDateTime.now())) {
+        SentEmail sentEmail = optionalSentEmail.get();
+
+        // Check expiry
+        if (sentEmail.getExpiry().toInstant().isBefore(Instant.now())) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Verification link has expired.");
         }
 
+        // Now find the User by the email from sentEmail
+        Optional<User> optionalUser = userRepository.findByEmail(sentEmail.getEmail());
+        if (!optionalUser.isPresent()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("User not found for the given token.");
+        }
+
+        User user = optionalUser.get();
         user.setVerified(true);
         user.setVerificationToken(null);
         user.setTokenExpiryTime(null);
         userRepository.save(user);
 
+        // Optionally update sentEmail status to "VERIFIED"
+        sentEmail.setStatus("VERIFIED");
+        sentEmailRepository.save(sentEmail);
+
         return ResponseEntity.ok("Email verified successfully.");
     }
+
 
     @RequestMapping(method = {RequestMethod.DELETE, RequestMethod.HEAD, RequestMethod.OPTIONS, RequestMethod.PATCH})
     public ResponseEntity<Void> methodNotAllowedUser() {
