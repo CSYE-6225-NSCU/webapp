@@ -29,6 +29,53 @@ variable "region" {
   default     = "us-east-1"
 }
 
+variable "vpc_id" {
+  type    = string
+  description = "The ID of the VPC where the instance will be launched"
+}
+
+variable "subnet_id" {
+  type    = string
+  description = "The ID of the subnet where the instance will be launched"
+}
+
+variable "db_name" {
+  type    = string
+  description = "The name of the PostgreSQL database"
+}
+
+variable "db_username" {
+  type    = string
+  description = "The username for the PostgreSQL database"
+}
+
+variable "db_password" {
+  type    = string
+  description = "The password for the PostgreSQL database"
+}
+
+variable "db_url" {
+  type    = string
+  description = "The connection URL for the PostgreSQL database"
+}
+
+variable "artifact_path" {
+  type    = string
+  description = "The path to the application artifact (JAR file)"
+}
+
+variable "instance_type" {
+  type    = string
+  description = "The EC2 instance type to use"
+}
+
+variable "source_ami" {
+  type    = string
+  description = "The base/source AMI ID to use for building the custom AMI"
+  default     = "ami-0866a3c8686eaeeba"
+}
+
+
 locals {
   ami_name = "${var.ami_name_prefix}-${formatdate("YYYYMMDD-HHmm", timestamp())}"
 }
