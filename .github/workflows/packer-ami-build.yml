@@ -47,15 +47,6 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      - name: Upgrade OS packages & Install Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get upgrade -y
-          sudo apt-get install -y python3 python3-pip nodejs npm
-          # If you have Python or Node dependencies:
-          # pip3 install -r requirements.txt
-          # npm install
-
       - name: Download JAR Artifact
         uses: actions/download-artifact@v4
         with:
