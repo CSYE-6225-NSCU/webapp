@@ -94,7 +94,7 @@ build {
   # 3. Upload the application artifact (JAR file)
   provisioner "file" {
     name        = "Upload Application JAR"
-    source      = "../target/*.jar"
+    source      = "../target/webapp-0.0.1-SNAPSHOT.jar"
     destination = "/tmp/webapp.jar"
   }
 
