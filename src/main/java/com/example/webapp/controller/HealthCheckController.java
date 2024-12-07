@@ -13,7 +13,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 
 @RestController
-@RequestMapping("/healthz")
+@RequestMapping
 public class HealthCheckController {
 
     private static final Logger logger = LoggerFactory.getLogger(HealthCheckController.class);
@@ -21,7 +21,7 @@ public class HealthCheckController {
     @Autowired
     private DataSource dataSource;
 
-    @GetMapping
+    @GetMapping({"/healthz", "/CICD"})
     public ResponseEntity<Void> healthCheck(HttpServletRequest request) {
         HttpHeaders headers = new HttpHeaders();
         headers.setCacheControl(CacheControl.noCache().mustRevalidate());
