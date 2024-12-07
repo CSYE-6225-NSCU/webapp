@@ -22,7 +22,7 @@ public class User {
     @Column(unique = true, nullable = false)
     @Email(message = "Email should be valid")
     @NotBlank(message = "Email is mandatory")
-    @Pattern(regexp = "^[\\w-\\.]+@[\\w-]+\\.[a-z]{2,3}$", message = "Invalid email address")
+    @Pattern(regexp = "^[\\w.-]+@[\\w.-]+\\.[a-z]{2,3}$", message = "Invalid email address")
     @JsonProperty("email")
     private String email;
 
@@ -52,10 +52,9 @@ public class User {
     private LocalDateTime accountUpdated;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonManagedReference // Manages the reference to avoid recursive serialization
+    @JsonManagedReference
     private Image image;
 
-    // New fields added for email verification
     @Column(nullable = false)
     @JsonProperty("verified")
     private boolean verified;
@@ -68,8 +67,6 @@ public class User {
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private LocalDateTime tokenExpiryTime;
 
-
-
     public User() {
     }
 
@@ -81,8 +78,6 @@ public class User {
         this.verified = false; // Default to false on creation
     }
 
-    // Getters and Setters for all fields, including new ones
-
     public Long getId() {
         return id;
     }
@@ -90,7 +85,6 @@ public class User {
     public String getEmail() {
         return email;
     }
-
     public void setEmail(String email) {
         this.email = email;
     }
@@ -99,7 +93,6 @@ public class User {
     public String getPassword() {
         return password;
     }
-
     public void setPassword(String password) {
         this.password = password;
     }
@@ -108,7 +101,6 @@ public class User {
     public String getFirstName() {
         return firstName;
     }
-
     public void setFirstName(String firstName) {
         this.firstName = firstName;
     }
@@ -117,7 +109,6 @@ public class User {
     public String getLastName() {
         return lastName;
     }
-
     public void setLastName(String lastName) {
         this.lastName = lastName;
     }
@@ -126,7 +117,6 @@ public class User {
     public LocalDateTime getAccountCreated() {
         return accountCreated;
     }
-
     public void setAccountCreated(LocalDateTime accountCreated) {
         this.accountCreated = accountCreated;
     }
@@ -135,7 +125,6 @@ public class User {
     public LocalDateTime getAccountUpdated() {
         return accountUpdated;
     }
-
     public void setAccountUpdated(LocalDateTime accountUpdated) {
         this.accountUpdated = accountUpdated;
     }
@@ -144,7 +133,6 @@ public class User {
     public Image getImage() {
         return image;
     }
-
     public void setImage(Image image) {
         this.image = image;
         if (image != null) {
@@ -156,7 +144,6 @@ public class User {
     public boolean isVerified() {
         return verified;
     }
-
     public void setVerified(boolean verified) {
         this.verified = verified;
     }
@@ -165,7 +152,6 @@ public class User {
     public String getVerificationToken() {
         return verificationToken;
     }
-
     public void setVerificationToken(String verificationToken) {
         this.verificationToken = verificationToken;
     }
@@ -174,7 +160,6 @@ public class User {
     public LocalDateTime getTokenExpiryTime() {
         return tokenExpiryTime;
     }
-
     public void setTokenExpiryTime(LocalDateTime tokenExpiryTime) {
         this.tokenExpiryTime = tokenExpiryTime;
     }
