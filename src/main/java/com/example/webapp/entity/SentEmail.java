@@ -1,33 +1,36 @@
 package com.example.webapp.entity;
 
 import jakarta.persistence.*;
-
 import java.sql.Timestamp;
 
 @Entity
 @Table(name = "sent_emails")
 public class SentEmail {
+
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(nullable = false, unique = true)
+    private String token; // Token as the primary key
 
     @Column(nullable = false)
     private String email;
 
-    @Column(nullable = false)
-    private String token;
-
     @Column(name = "sent_at", nullable = false)
     private Timestamp sentAt;
 
+    @Column(nullable = false)
+    private Timestamp expiry; // Expiry column added
+
+    @Column(length = 50)
     private String status;
 
-    public Long getId() {
-        return id;
+    // Getters and Setters
+
+    public String getToken() {
+        return token;
     }
 
-    public void setId(Long id) {
-        this.id = id;
+    public void setToken(String token) {
+        this.token = token;
     }
 
     public String getEmail() {
@@ -38,20 +41,20 @@ public class SentEmail {
         this.email = email;
     }
 
-    public String getToken() {
-        return token;
-    }
-
-    public void setToken(String token) {
-        this.token = token;
-    }
-
     public Timestamp getSentAt() {
         return sentAt;
     }
 
     public void setSentAt(Timestamp sentAt) {
         this.sentAt = sentAt;
+    }
+
+    public Timestamp getExpiry() {
+        return expiry;
+    }
+
+    public void setExpiry(Timestamp expiry) {
+        this.expiry = expiry;
     }
 
     public String getStatus() {
