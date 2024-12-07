@@ -48,5 +48,5 @@ jobs:
         run: |
           packer validate \
             -var "instance_type=t2.micro" \
-            -var "region=${{ secrets.AWS_REGION }}" \
+            -var "region=${{secrets.AWS_REGION }}" \
             packer-template.pkr.hcl
