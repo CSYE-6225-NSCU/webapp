@@ -69,21 +69,19 @@ jobs:
           packer validate packer-template.pkr.hcl
 
       - name: Deploy AMI with Packer
-        id: packer
         run: |
           cd packer
           packer build \
-            -var "artifact_path=../target/webapp-0.0.1-SNAPSHOT.jar" \
-            -var "instance_type=${{ secrets.INSTANCE_TYPE }}" \
-            -var "source_ami=${{ secrets.SOURCE_AMI }}" \
-            -var "vpc_id=${{ secrets.AWS_VPC_ID }}" \
-            -var "subnet_id=${{ secrets.AWS_SUBNET_ID }}" \
+            -var "db_url=${{ secrets.DB_URL }}" \
             -var "db_name=${{ secrets.DB_NAME }}" \
             -var "db_username=${{ secrets.DB_USERNAME }}" \
             -var "db_password=${{ secrets.DB_PASSWORD }}" \
-            -var "db_url=${{ secrets.DB_URL }}" \
-            packer-template.pkr.hcl    
-          
+            -var "artifact_path=../target/webapp-0.0.1-SNAPSHOT.jar" \
+            -var "vpc_id=${{ secrets.AWS_VPC_ID }}" \
+            -var "subnet_id=${{ secrets.AWS_SUBNET_ID }}" \
+            packer-template.pkr.hcl
+      
+
       - name: Extract AMI ID
         id: extract_ami
         run: |
