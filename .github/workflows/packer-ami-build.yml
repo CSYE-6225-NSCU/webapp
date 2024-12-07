@@ -91,7 +91,6 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_PROD_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-
       - name: Create New Launch Template Version
         id: launch-template
         run: |
@@ -118,24 +117,21 @@ jobs:
             --output text)
 
           echo "LAUNCH_TEMPLATE_VERSION=$LAUNCH_TEMPLATE_VERSION" >> $GITHUB_ENV
-
       - name: Update Auto Scaling Group
-        run: |
+        run: >
           aws autoscaling update-auto-scaling-group \
             --auto-scaling-group-name "${{ secrets.ASG_NAME }}" \
             --launch-template "LaunchTemplateName=${{ secrets.LAUNCH_TEMPLATE_NAME }},Version=$LAUNCH_TEMPLATE_VERSION"
-
       - name: Start Instance Refresh
         id: instance-refresh
-        run: |
+        run: >
           INSTANCE_REFRESH_ID=$(aws autoscaling start-instance-refresh \
             --auto-scaling-group-name "${{ secrets.ASG_NAME }}" \
             --preferences '{"InstanceWarmup": 300, "MinHealthyPercentage": 50}' \
             --query 'InstanceRefreshId' --output text)
           echo "INSTANCE_REFRESH_ID=$INSTANCE_REFRESH_ID" >> $GITHUB_ENV
-
-      - name: Wait for Instance Refresh completion
-        run: |
+      - name: Wait for Instance Refresh to Complete
+        run: >
           while true; do
             STATUS=$(aws autoscaling describe-instance-refreshes \
               --auto-scaling-group-name "${{ secrets.ASG_NAME }}" \
@@ -151,6 +147,5 @@ jobs:
             fi
             sleep 30
           done
-
       - name: Deployment Completed
         run: echo "Deployment with AMI ${{ env.AMI_ID }} completed successfully."
